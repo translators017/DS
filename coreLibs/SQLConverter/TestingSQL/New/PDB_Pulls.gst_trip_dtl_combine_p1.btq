@@ -1,0 +1,627 @@
+#*********************************************************************
+# Script Name:	bhk.gst_trip_dtl_combine.btq
+# Example(S):	
+# Purpose:	BTEQ script to insert newly aggregated and combined trip
+#		into FINAL temp table
+# Written:	07/13/2012
+# Author:	Brad Karnafel
+# Modifications: 
+# ********************************************************************
+. $CONFIGDIR/parseArg
+
+# Check for valid arguments
+REQUIRE_LOGON
+
+bteq <<EOF
+.RUN FILE $LOGONDIR/$LOGON;
+.SET ERRORLEVEL 3807 SEVERITY 0;
+
+
+/*********************************************************
+	-- Step: 1
+	-- get purged combined accounts	
+	-- also join to cms remediation table to include
+		special trips that need to be combined on request
+**********************************************************/
+locking table ${EDWDB}.gst_trip_dtl_pdb for access
+locking table ${EDWDB}.gst_cons_xref for access
+locking table ${EDWDB}.cms_trip_acct_include_orig for access
+create multiset volatile table candidate_accounts
+as
+(
+select e.i_dmid
+      ,e.i_xref_dmid
+ from ${EDWDB}.gst_cons_xref e
+      ,( select a.i_dmid
+         from ${EDWDB}.gst_cons_xref a
+      		,(select i_dmid
+          		from ${EDWDB}.gst_trip_dtl_pdb c
+          		where c_purge_flag = 'Y'
+          		and not exists ( select *
+          		                 from ${EDWDB}.gst_cons_xref d
+          		                 where c.i_dmid = d.i_dmid )
+          		group by 1) b
+  	where a.i_xref_dmid = b.i_dmid) f
+ where e.i_dmid = f.i_dmid
+
+      union
+      
+select c.i_dmid
+      ,c.i_xref_dmid  
+  from ${EDWDB}.gst_cons_xref c
+      ,(select i_dmid
+  	from ${EDWDB}.gst_cons_xref a
+ 	where exists ( select *
+                 	from ${EDWDB}.cms_trip_acct_include_orig b
+                	where a.i_xref_dmid = b.i_xref_dmid )
+ 	group by 1) d
+  where c.i_dmid = d.i_dmid
+) 
+with data
+primary index( i_dmid )
+on commit preserve rows;
+
+
+.IF ERRORCODE <> 0 THEN .QUIT ERRORCODE;
+
+
+/*********************************************************
+	-- Step: 2
+	-- Segragate the _pdb trips that will be aggregated
+	-- You can grab the other columns like i_trip_id that will be aggregated
+	-- from trip detail at this point to calculate the new values in the 
+	-- olap process, or leave them out and do that later on.
+	-- I will include them here though
+	
+	-- alt for just overlapping all
+**********************************************************/
+locking table ${EDWDB}.gst_trip_dtl_pdb for access
+locking table ${ARCHIVEDB}.gst_trip_dtl_pdb for access
+create multiset volatile table candidate_trips_alt
+as
+(
+ select b.i_dmid
+      ,a.i_dmid as old_dmid
+      ,c_prop_cd
+      ,d_start_dt
+      ,d_end_dt
+      ,i_trip_id        
+      ,c_group_cd    
+      ,c_week_cd           
+      ,f_denom_most_play     
+      ,c_purge_flag
+      ,d_purge_date
+  from ${EDWDB}.gst_trip_dtl_pdb a
+      ,candidate_accounts b
+ where a.i_dmid = b.i_xref_dmid 
+)
+with data
+primary index( i_dmid )
+on commit preserve rows;
+
+
+.IF ERRORCODE <> 0 THEN .QUIT ERRORCODE;
+
+
+/*********************************************************
+	-- Step: 3
+	-- Run the olap process over candidate trips to come up with the new keys
+	
+	-- alt for just overlapping all
+**********************************************************/
+create multiset volatile table calc_purged_comb_trips_alt
+as
+(
+select      cmb.i_dmid                   
+           ,cmb.c_prop_cd  
+           ,cmb.new_start_dt as d_start_dt          
+           ,cmb.new_end_dt as d_end_dt                      
+           ,max(i_trip_id) as i_trip_id        
+           ,max(c_group_cd) as c_group_cd    
+           ,max(c_week_cd) as c_week_cd          
+           ,max(f_denom_most_play) as f_denom_most_play     
+           ,max(c_purge_flag) as c_purge_flag
+           ,min(d_purge_date) as d_purge_date
+           ,count(*) as trip_count
+from  (select dt2.* 
+             ,d_comb_start_dt as new_start_dt
+             ,max(d_end_dt) 
+              over 
+             (partition by   i_dmid
+                           , c_prop_cd
+                           , d_comb_start_dt
+             ) as new_end_dt                
+       from  (select  dt1.*
+                     ,max  (case when d_start_dt <= max_end_dt then null else d_start_dt end) 
+                      over 
+                      (partition by i_dmid
+                                  , c_prop_cd
+                       order by     d_start_dt
+                                  , max_end_dt
+                       rows unbounded preceding
+                      ) as d_comb_start_dt
+                    from (  select        --key construction
+                                          c_prop_cd  
+                                         ,i_dmid
+                                         ,d_end_dt   
+                                         ,d_start_dt        
+                                         ,i_trip_id 
+                                         ,c_group_cd    
+                                         ,c_week_cd           
+                                         ,f_denom_most_play     
+                                         ,c_purge_flag
+                                         ,d_purge_date 
+                                         ,old_dmid
+                                         ,max(d_end_dt) 
+                                          over 
+                                          (partition by      i_dmid
+                                                           , c_prop_cd
+                                           order by          d_start_dt
+                                                           , d_end_dt
+                                          rows between unbounded preceding and 1 preceding
+                                          ) as max_end_dt
+
+                                 from       candidate_trips_alt
+
+                         ) dt1
+             ) dt2
+      ) cmb 
+ group by 1,2,3,4
+) with data
+primary index (i_dmid)
+on commit preserve rows
+;
+
+.IF ERRORCODE <> 0 THEN .QUIT ERRORCODE;
+
+
+/*********************************************************
+	-- Step 4
+	-- Start your stage table with trips not in the candiate trips
+**********************************************************/
+locking ${EDWDB}.gst_trip_dtl_pdb for access
+create multiset volatile table gst_trip_dtl_vol_stg
+as
+(
+select *
+from ${EDWDB}.gst_trip_dtl_pdb a
+where not exists( select *
+                    from candidate_trips_alt b
+                   where a.i_dmid = b.old_dmid
+                     and a.c_prop_cd = b.c_prop_cd
+                     and a.d_start_dt = b.d_start_dt
+                     and a.d_end_dt = b.d_end_dt 
+                     and a.i_trip_id = b.i_trip_id )
+)
+with data 
+primary index( i_dmid )
+on commit preserve rows;
+
+.IF ERRORCODE <> 0 THEN .QUIT ERRORCODE;
+
+
+/*********************************************************
+	-- Step 5
+	-- Add in new combined trips with a trip count of 1, but with new dmid
+**********************************************************/
+locking ${EDWDB}.gst_trip_dtl_pdb for access
+insert into gst_trip_dtl_vol_stg
+select b.i_dmid
+      ,a.c_prop_cd
+      ,a.i_trip_id
+      ,a.d_rpt_period
+      ,a.d_start_dt
+      ,a.d_end_dt
+      ,a.i_nbr_days
+      ,a.i_rated_days
+      ,a.f_actual_all
+      ,a.f_actual_game
+      ,a.f_actual_slot
+      ,a.f_actual_oth
+      ,a.f_theo_all
+      ,a.f_theo_game
+      ,a.f_theo_slot
+      ,a.f_theo_oth
+      ,a.c_group_cd
+      ,a.f_comp_worth
+      ,a.c_week_cd
+      ,a.i_trip_nbr
+      ,a.i_brand_trip_nbr
+      ,a.avg_dly_act_all_days_all_trp
+      ,a.avg_dly_theo_all_days_all_trp
+      ,a.avg_dly_act_rt_days_all_trp
+      ,a.avg_dly_theo_rt_days_all_trp
+      ,a.f_cash_play_game
+      ,a.f_cash_play_slot
+      ,a.f_cash_play_oth
+      ,a.f_marker_play_game
+      ,a.f_marker_play_slot
+      ,a.f_marker_play_oth
+      ,a.f_denom_most_play
+      ,a.f_avgbet_game
+      ,a.f_avgbet_slot
+      ,a.f_avgbet_oth
+      ,a.i_avgbet_div_game
+      ,a.i_avgbet_div_slot
+      ,a.i_avgbet_div_oth
+      ,a.i_len_of_play_game
+      ,a.i_len_of_play_slot
+      ,a.i_len_of_play_oth
+      ,a.f_room_comp_amt
+      ,a.f_food_comp_amt
+      ,a.f_other_comp_amt
+      ,a.f_total_comp_amt
+      ,a.c_quality_cd
+      ,a.d_timestamp
+      ,a.c_purge_flag
+      ,a.d_purge_date
+  from ${EDWDB}.gst_trip_dtl_pdb a
+      ,calc_purged_comb_trips_alt b
+ where b.trip_count = 1
+   and a.c_prop_cd = b.c_prop_cd
+   and a.d_start_dt = b.d_start_dt
+   and a.d_end_dt = b.d_end_dt
+   and a.i_trip_id = b.i_trip_id;
+
+.IF ERRORCODE <> 0 THEN .QUIT ERRORCODE;
+
+
+/*********************************************************
+	-- Step 6
+	-- now pull out new combined trips with trip count > 1 to calculate new metrics
+**********************************************************/
+create multiset volatile table new_trips
+as
+(
+select *
+  from calc_purged_comb_trips_alt
+ where trip_count > 1
+)
+with data 
+primary index( i_dmid )
+on commit preserve rows;
+
+.IF ERRORCODE <> 0 THEN .QUIT ERRORCODE;
+
+
+/*********************************************************
+	-- Step 7
+	-- drop the original calculated trips and candidate trips tables
+**********************************************************/
+drop table calc_purged_comb_trips_alt;
+drop table candidate_trips_alt;
+
+
+/*********************************************************
+	-- Step 8
+	-- Calculate gaming metrics for new trips
+**********************************************************/
+locking table ${EDWDB}.gst_game_dtl for access
+locking table ${ARCHIVEDB}.gst_game_dtl for access
+create multiset volatile table gst_trip_dtl_new_gm
+as
+(
+select 
+ a.i_dmid                        
+,a.c_prop_cd                     
+,a.d_start_dt                    
+,a.d_end_dt 
+,i_trip_id    
+,(d_end_dt - extract(day from d_end_dt)) + 1  as d_rpt_period  
+,(d_end_dt - d_start_dt)+1 as i_nbr_days    
+,c_group_cd    
+,c_week_cd           
+,f_denom_most_play     
+,a.c_purge_flag
+,a.d_purge_date                     
+,zeroifnull(count(distinct(c.d_date))) as i_rated_days                
+,zeroifnull(sum(f_actual_win)) as f_actual_all                  
+,zeroifnull(sum( 
+ case
+ when c_game_type = 'P' then f_actual_win 
+ else 0
+    end)) as f_actual_game                 
+,zeroifnull(sum( 
+ case
+ when c_game_type = 'S' then f_actual_win 
+ else 0
+ end)) as f_actual_slot                 
+,zeroifnull(sum( 
+ case
+ when c_game_type = 'O' then f_actual_win 
+ else 0
+    end)) as f_actual_oth          
+,zeroifnull(sum(f_theoretical)) as f_theo_all                    
+,zeroifnull(sum( 
+ case
+ when c_game_type = 'P' then f_theoretical 
+ else 0
+    end)) as f_theo_game                   
+,zeroifnull(sum( 
+ case
+ when c_game_type = 'S' then f_theoretical 
+ else 0
+    end)) as f_theo_slot                   
+,zeroifnull(sum( 
+ case
+ when c_game_type = 'O' then f_theoretical 
+ else 0
+    end)) as f_theo_oth       
+,zeroifnull(sum( 
+ case
+ when c_game_type = 'P' then f_cash_play 
+ else  0
+    end)) as f_cash_play_game              
+,zeroifnull(sum( 
+ case
+ when c_game_type = 'S' then f_cash_play 
+ else  0
+    end)) as f_cash_play_slot              
+,zeroifnull(sum( 
+ case
+ when c_game_type = 'O' then f_cash_play 
+ else  0
+    end)) as f_cash_play_oth   
+,zeroifnull(sum( 
+ case
+ when c_game_type = 'P' then f_marker_play 
+ else  0
+    end)) as f_marker_play_game            
+,zeroifnull(sum( 
+ case
+ when c_game_type = 'S' then f_marker_play 
+ else  0
+    end)) as f_marker_play_slot            
+,zeroifnull(sum( 
+ case
+ when c_game_type = 'O' then f_marker_play 
+ else  0
+    end)) as f_marker_play_oth            
+,zeroifnull(sum( 
+ case
+ when c_game_type = 'P' then f_avg_bet 
+ else  0
+    end)/count(*)) as f_avgbet_game                 
+,zeroifnull(sum(  
+ case
+ when c_game_type = 'S' then f_avg_bet 
+ else  0
+    end)/count(*)) as f_avgbet_slot                 
+,zeroifnull(sum( 
+ case
+ when c_game_type = 'O' then f_avg_bet 
+ else  0
+    end)/count(*)) as f_avgbet_oth                   
+ ,zeroifnull(sum( 
+  case
+ when c_game_type = 'P' then i_avgbet_div 
+ else  0
+    end)/count(*)) as i_avgbet_div_game             
+,zeroifnull(sum( 
+ case
+ when c_game_type = 'S' then i_avgbet_div 
+ else  0
+    end)/count(*)) as i_avgbet_div_slot             
+,zeroifnull(sum( 
+ case
+ when c_game_type = 'O' then i_avgbet_div 
+ else  0
+    end)/count(*)) as i_avgbet_div_oth              
+,zeroifnull(sum( 
+ case
+ when c_game_type = 'P' then i_len_of_play 
+ else  0
+    end)) as i_len_of_play_game            
+,zeroifnull(sum( 
+ case
+ when c_game_type = 'S' then i_len_of_play 
+ else  0
+    end)) as i_len_of_play_slot            
+,zeroifnull(sum( 
+ case
+ when c_game_type = 'O' then i_len_of_play 
+ else  0
+    end)) as i_len_of_play_oth     
+      
+from new_trips a
+left outer join (
+ sel * from ${EDWDB}.gst_game_dtl e
+ where exists ( select *
+                 from candidate_accounts d
+                where e.i_dmid = d.i_dmid )
+  
+  union all
+ 
+ sel * from ${ARCHIVEDB}.gst_game_dtl f
+  where exists ( select *
+                   from candidate_accounts g
+                  where f.i_dmid = g.i_dmid)) c
+on  a.i_dmid    = c.i_dmid
+and a.c_prop_cd = c.c_prop_cd
+and c.d_date between a.d_start_dt and a.d_end_dt 
+group by 1,2,3,4,5,6,7,8,9,10,11,12)
+with data 
+primary index( i_dmid )
+on commit preserve rows;
+                  
+.IF ERRORCODE <> 0 THEN .QUIT ERRORCODE;
+
+
+/*********************************************************
+	-- Step 9
+	-- Calculate comp metrics for new trips
+	-- get new comp values from gst_comp_dtl
+**********************************************************/
+drop table new_trips;
+
+locking table ${EDWDB}.gst_comp_dtl for access
+create multiset volatile table gst_trip_dtl_new_cmp
+as
+(
+select a.i_dmid                        
+,a.c_prop_cd                     
+,a.d_start_dt                    
+,a.d_end_dt 
+,i_trip_id     
+,a.d_rpt_period  
+,i_nbr_days     
+,c_group_cd    
+,c_week_cd           
+,f_denom_most_play     
+,a.c_purge_flag
+,a.d_purge_date                     
+,i_rated_days                
+,f_actual_all                  
+,f_actual_game                 
+,f_actual_slot                 
+,f_actual_oth          
+,f_theo_all                    
+,f_theo_game                   
+,f_theo_slot                   
+,f_theo_oth       
+,f_cash_play_game              
+,f_cash_play_slot              
+,f_cash_play_oth   
+,f_marker_play_game            
+,f_marker_play_slot            
+,f_marker_play_oth            
+,f_avgbet_game                 
+,f_avgbet_slot                 
+,f_avgbet_oth                   
+,i_avgbet_div_game             
+,i_avgbet_div_slot             
+,i_avgbet_div_oth              
+,i_len_of_play_game            
+,i_len_of_play_slot            
+,i_len_of_play_oth 
+ ,zeroifnull(sum(d.f_comp_amount)) as f_comp_worth                  
+ ,zeroifnull(sum( 
+  case
+  when c_comp_grp = 'R' then f_comp_amount 
+  else  0
+  end)) as f_room_comp_amt               
+ ,zeroifnull(sum( 
+  case
+  when c_comp_grp = 'F' then f_comp_amount 
+  else  0
+  end)) as f_food_comp_amt               
+ ,zeroifnull(sum( 
+  case
+  when c_comp_grp in ('T', 'O', 'S','M','C') then f_comp_amount 
+  else 0
+  end)) as f_other_comp_amt              
+ ,zeroifnull(sum(f_comp_amount)) as f_total_comp_amt
+
+from gst_trip_dtl_new_gm a
+left outer join ${EDWDB}.gst_comp_dtl d
+on a.i_dmid   = d.i_dmid
+and   a.c_prop_cd = d.c_prop_cd
+and   d.d_date between a.d_start_dt and a.d_end_dt
+group by 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,
+         19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,
+         34,35,36
+)
+with data
+primary index( i_dmid )
+on commit preserve rows;
+
+.IF ERRORCODE <> 0 THEN .QUIT ERRORCODE;
+
+
+/*********************************************************
+	-- Step 10
+	-- materialize volatile stage table
+**********************************************************/
+drop table gst_trip_dtl_new_gm;
+
+insert into gst_trip_dtl_vol_stg
+select i_dmid
+      ,c_prop_cd
+      ,i_trip_id
+      ,d_rpt_period
+      ,d_start_dt
+      ,d_end_dt
+      ,i_nbr_days
+      ,i_rated_days
+      ,f_actual_all
+      ,f_actual_game
+      ,f_actual_slot
+      ,f_actual_oth
+      ,f_theo_all
+      ,f_theo_game
+      ,f_theo_slot
+      ,f_theo_oth
+      ,c_group_cd
+      ,f_comp_worth
+      ,c_week_cd
+      ,0 i_trip_nbr  /* should be recalculated via key table & later summarization */
+      ,0 i_brand_trip_nbr  /* should be recalculated via key table & later summarization */
+      ,0 avg_dly_act_all_days_all_trp
+      ,0 avg_dly_theo_all_days_all_trp
+      ,0 avg_dly_act_rt_days_all_trp
+      ,0 avg_dly_theo_rt_days_all_trp
+      ,f_cash_play_game
+      ,f_cash_play_slot
+      ,f_cash_play_oth
+      ,f_marker_play_game
+      ,f_marker_play_slot
+      ,f_marker_play_oth
+      ,f_denom_most_play
+      ,f_avgbet_game
+      ,f_avgbet_slot
+      ,f_avgbet_oth
+      ,i_avgbet_div_game
+      ,i_avgbet_div_slot
+      ,i_avgbet_div_oth
+      ,i_len_of_play_game
+      ,i_len_of_play_slot
+      ,i_len_of_play_oth
+      ,f_room_comp_amt
+      ,f_food_comp_amt
+      ,f_other_comp_amt
+      ,f_total_comp_amt
+      ,'' as c_quality_cd
+      ,current_timestamp(0) as d_timestamp
+      ,c_purge_flag
+      ,d_purge_date
+  from gst_trip_dtl_new_cmp;
+  
+.IF ERRORCODE <> 0 THEN .QUIT ERRORCODE;
+
+
+/*********************************************************
+	-- Step 11
+	-- materialize volatile stage table
+**********************************************************/
+drop table gst_trip_dtl_new_cmp;
+
+drop table ${WORKDB}.gst_trip_dtl_stage;
+
+create multiset table ${WORKDB}.gst_trip_dtl_stage
+as
+(
+select *
+  from gst_trip_dtl_vol_stg
+)
+with data
+primary index( i_dmid );
+
+.IF ERRORCODE <> 0 THEN .QUIT ERRORCODE;
+
+
+/*********************************************************
+	COLLECT STATS
+**********************************************************/
+COLLECT STATS ON ${WORKDB}.gst_trip_dtl_stage INDEX (i_dmid);
+COLLECT STATS ON ${WORKDB}.gst_trip_dtl_stage COLUMN d_end_dt;
+COLLECT STATS ON ${WORKDB}.gst_trip_dtl_stage COLUMN d_start_dt;
+COLLECT STATS ON ${WORKDB}.gst_trip_dtl_stage COLUMN c_prop_cd;
+
+
+.IF ERRORCODE <> 0 THEN .QUIT ERRORCODE;
+.QUIT; 
+
+EOF
+
+rc=$?
+exit ${rc}

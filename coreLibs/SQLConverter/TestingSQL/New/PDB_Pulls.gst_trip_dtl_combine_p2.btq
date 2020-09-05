@@ -1,0 +1,138 @@
+#========================================================================
+# Script Name:   PDB_Pulls.gst_trip_dtl_combine_p2.btq
+# Example(S):    
+# Purpose:       BTEQ script to insert records that have been updated
+#                by re-aggregation into key table for summary processing
+# Written:       03/12/2012
+# Author:        LBM
+# Modifications: 
+#    PGMR     DATE               COMMENTS
+#   Pat A.   06-16-2014        Add a condition where not exists in the
+#                             key table to prevent duplicated data.
+#
+#  C.Riveros 09-26-2014      Changed from INSERT to MERGE statement
+#  (Teradata)                Created physical table to use instead of union subselect
+#                            Created secondary index on workdb 
+# =======================================================================
+. $CONFIGDIR/parseArg
+
+# Check for valid arguments
+REQUIRE_LOGON
+
+bteq <<EOF
+.RUN FILE $LOGONDIR/$LOGON;
+
+/*********************************************************
+* CREATE A SECONDARY INDEX TO HELP OUT IN THE WHERE NOT 
+* EXIST STEP WITH ${WORKDB}.gst_trip_dtl_stage 
+**********************************************************/
+
+SELECT TOP 1 1 FROM DBC.Indices WHERE IndexName='P2I_STAGE' AND TABLENAME='gst_trip_dtl_stage' AND DatabaseName='${WORKDB}';
+.IF ACTIVITYCOUNT = 1 THEN DROP INDEX P2I_STAGE ON ${WORKDB}.gst_trip_dtl_stage;
+
+CREATE INDEX  P2I_STAGE  (i_dmid,c_prop_cd,i_trip_id,d_start_dt,d_end_dt )  ON  ${WORKDB}.gst_trip_dtl_stage;
+.IF ERRORCODE <> 0 THEN .QUIT ERRORCODE;
+
+/*********************************************************
+* CREATE A TEMPORARY TABLE THAT WILL BE USED TO SELECT THE 
+* RECORDS THAT WILL BE INSERTED 
+**********************************************************/
+
+SELECT TOP 1 1 FROM ${WORKDB}.U_M_A_gst_trip_dtl;
+.IF ERRORCODE = 0 THEN DROP TABLE ${WORKDB}.U_M_A_gst_trip_dtl;
+
+CREATE MULTISET TABLE ${WORKDB}.U_M_A_gst_trip_dtl AS
+(
+SELECT i_dmid
+              ,c_prop_cd
+              ,i_trip_id
+              ,d_start_dt
+              ,d_end_dt 
+        from EDW_MAIN.gst_trip_dtl
+        group by 1,2,3,4,5
+        union all
+        select i_dmid
+              ,c_prop_cd
+              ,i_trip_id
+              ,d_start_dt
+              ,d_end_dt 
+        FROM EDW_ARCHIVE.gst_trip_dtl
+        group by 1,2,3,4,5
+ )
+ WITH DATA
+ PRIMARY INDEX P2I_UMA (i_dmid,c_prop_cd,i_trip_id,d_start_dt,d_end_dt ); 
+.IF ERRORCODE <> 0 THEN .QUIT ERRORCODE;
+
+
+/*********************************************************
+    INSERT RECORDS THAT HAVE BEEN UPDATED/RE-AGGREGATED
+    INTO KEY TABLE AS DELETE
+**********************************************************/
+LOCKING ${PDBKEYDB}.gst_trip_dtl_key FOR ACCESS
+MERGE INTO ${PDBKEYDB}.gst_trip_dtl_key A
+USING
+(
+SELECT 
+	 i_dmid
+	,c_prop_cd
+	,i_trip_id
+	,'D' AS change_code
+	,777777777 AS key_sequence
+	,CURRENT_TIMESTAMP(5) AS time_stamp
+	,CURRENT_TIMESTAMP(0) AS d_timestamp
+FROM 
+	${WORKDB}.U_M_A_gst_trip_dtl c
+WHERE NOT EXISTS 
+	(
+	SELECT
+		 *
+	FROM 
+		${WORKDB}.gst_trip_dtl_stage d
+	WHERE c.i_dmid = d.i_dmid
+	AND   c.c_prop_cd   = d.c_prop_cd
+	AND   c.d_start_dt  = d.d_start_dt
+	AND   c.d_end_dt    = d.d_end_dt
+	AND   c.i_trip_id   = d.i_trip_id
+	)
+) B
+ON a.i_dmid = B.i_dmid
+AND a.i_trip_id = B.i_trip_id
+WHEN NOT MATCHED THEN INSERT
+(
+	i_dmid
+	,c_prop_cd
+	,i_trip_id
+	,change_code
+	,key_sequence
+	,time_stamp
+	,d_timestamp
+)
+VALUES 
+(
+	b.i_dmid
+	,b.c_prop_cd
+	,b.i_trip_id
+	,b.change_code
+	,b.key_sequence
+	,b.time_stamp
+	,b.d_timestamp
+)
+;
+.IF ERRORCODE <> 0 THEN .QUIT ERRORCODE;
+
+/*********************************************************
+* REMOVE THE TABLE AND INDEX THAT CREATED FOR THIS BTEQ
+**********************************************************/
+
+DROP TABLE ${WORKDB}.U_M_A_gst_trip_dtl;
+.IF ERRORCODE <> 0 THEN .QUIT ERRORCODE;
+
+DROP INDEX P2I_STAGE ON ${WORKDB}.gst_trip_dtl_stage;
+.IF ERRORCODE <> 0 THEN .QUIT ERRORCODE;
+
+.QUIT 0; 
+
+EOF
+
+rc=$?
+exit ${rc}

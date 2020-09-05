@@ -1,0 +1,85 @@
+#!/usr/bin/ksh
+#############################################################################################
+# Script Name  : Folio_dtl_MDM_update.btq
+# Purpose      : This script updates some column values data in Workdb.opera_folio_dtl table with Bteq utility.
+#
+# Written      : 11/15/2018
+# Author       : Nishit
+# Modifications:                 
+#############################################################################################
+
+. ${CONFIGDIR}/parseArg
+
+#############################################################################################
+# SET LOCAL VARIABLES
+#############################################################################################
+SOURCE_ID=115
+
+bteq <<EOD
+
+.RUN FILE ${LOGONDIR}/${LOGON};
+.SET WIDTH 150;
+.SESSIONS 20;
+
+/********************************************************************************************
+Update and insert lms data in folio_dtl_l_key_all table 
+*********************************************************************************************/
+merge into ${EDWDB}.folio_dtl_l_all_key
+using (SELECT   f_ticket_id
+               ,c_prop_cd
+               ,f_folio_id
+               ,i_seq_nbr
+			   ,d_timestamp
+      FROM  ${EDWDB}.lms_folio_dtl_l_key) 
+on          ${EDWDB}.folio_dtl_l_all_key.f_ticket_id  = ${EDWDB}.lms_folio_dtl_l_key.f_ticket_id
+      AND   ${EDWDB}.folio_dtl_l_all_key.c_prop_cd    = ${EDWDB}.lms_folio_dtl_l_key.c_prop_cd
+      AND   ${EDWDB}.folio_dtl_l_all_key.f_folio_id   = ${EDWDB}.lms_folio_dtl_l_key.f_folio_id
+      AND   ${EDWDB}.folio_dtl_l_all_key.i_seq_nbr    = ${EDWDB}.lms_folio_dtl_l_key.i_seq_nbr 
+when matched then update 
+set    d_timestamp =${EDWDB}.lms_folio_dtl_l_key.d_timestamp,i_source_id = '10'
+when not matched then insert 
+values        ( ${EDWDB}.lms_folio_dtl_l_key.f_ticket_id
+               ,${EDWDB}.lms_folio_dtl_l_key.c_prop_cd
+               ,${EDWDB}.lms_folio_dtl_l_key.f_folio_id     
+               ,${EDWDB}.lms_folio_dtl_l_key.i_seq_nbr
+               ,${EDWDB}.lms_folio_dtl_l_key.d_timestamp
+			   ,'10');
+			   
+			   
+.IF ERRORCODE <> 0 THEN QUIT 8;
+
+/********************************************************************************************
+Update and insert opera data in folio_dtl_l_key_all table
+*********************************************************************************************/
+merge into ${EDWDB}.folio_dtl_l_all_key
+using (SELECT   f_ticket_id
+               ,c_prop_cd
+               ,f_folio_id
+               ,i_seq_nbr
+			   ,d_timestamp
+      FROM  ${EDWDB}.opera_folio_dtl_l_key ) 
+on          ${EDWDB}.folio_dtl_l_all_key.f_ticket_id  = ${EDWDB}.opera_folio_dtl_l_key.f_ticket_id
+      AND   ${EDWDB}.folio_dtl_l_all_key.c_prop_cd    = ${EDWDB}.opera_folio_dtl_l_key.c_prop_cd
+      AND   ${EDWDB}.folio_dtl_l_all_key.f_folio_id   = ${EDWDB}.opera_folio_dtl_l_key.f_folio_id
+      AND   ${EDWDB}.folio_dtl_l_all_key.i_seq_nbr    = ${EDWDB}.opera_folio_dtl_l_key.i_seq_nbr 
+when matched then update 
+set               d_timestamp = ${EDWDB}.opera_folio_dtl_l_key.d_timestamp,i_source_id = ${SOURCE_ID}
+when not matched then insert 
+values        ( ${EDWDB}.opera_folio_dtl_l_key.f_ticket_id
+               ,${EDWDB}.opera_folio_dtl_l_key.c_prop_cd
+               ,${EDWDB}.opera_folio_dtl_l_key.f_folio_id     
+               ,${EDWDB}.opera_folio_dtl_l_key.i_seq_nbr
+               ,${EDWDB}.opera_folio_dtl_l_key.d_timestamp
+			   ,${SOURCE_ID});
+
+.QUIT;
+
+EOD
+
+rc=$?
+if [[ ${rc} -ne 0 ]]; then
+  print "*** Load of folio_dtl_l_key_all table failed (${rc})" >&2
+  exit 8
+fi
+
+exit 0

@@ -1,0 +1,98 @@
+#*********************************************************************
+# Script Name:	gst_game_dtl_combine.btq
+# Example(S):	
+# Purpose:	BTEQ script to gather all candidate purge records for
+#		combines
+# Written:	03/12/2012
+# Author:	LBM
+# Modifications: 
+# ********************************************************************
+. $CONFIGDIR/parseArg
+
+# Check for valid arguments
+REQUIRE_LOGON
+
+bteq <<EOF
+.RUN FILE $LOGONDIR/$LOGON;
+.SET ERRORLEVEL 3807 SEVERITY 0;
+
+/*********************************************************
+	GET ALL PURGED RECORDS THAT WILL BE COMBINED
+**********************************************************/
+DROP TABLE ${WORKDB}.GGD_PURGED_VICTIM_SURVIVORS;
+
+CREATE MULTISET TABLE ${WORKDB}.GGD_PURGED_VICTIM_SURVIVORS
+     (
+      i_dmid DECIMAL(11,0) NOT NULL,
+      i_xref_dmid DECIMAL(11,0) NOT NULL,
+      c_prop_cd CHAR(3) CHARACTER SET LATIN NOT CASESPECIFIC NOT NULL,
+      c_game_type CHAR(1) CHARACTER SET LATIN NOT CASESPECIFIC NOT NULL COMPRESS ('o','p','s'),
+      c_game_cd CHAR(2) CHARACTER SET LATIN NOT CASESPECIFIC NOT NULL,
+      f_slot_denom FLOAT NOT NULL,
+      d_date DATE FORMAT 'mm/dd/yyyy' NOT NULL,
+      d_rpt_period DATE FORMAT 'mm/dd/yyyy' NOT NULL,
+      f_actual_win FLOAT,
+      f_avg_bet FLOAT,
+      i_avgbet_div INTEGER,
+      f_cash_play FLOAT,
+      f_marker_play FLOAT,
+      i_len_of_play INTEGER,
+      f_theoretical FLOAT,
+      c_purge_flag CHAR(1) CHARACTER SET LATIN NOT CASESPECIFIC NOT NULL,
+      d_purge_date DATE FORMAT 'mm/dd/yyyy' NOT NULL,
+      c_quality_cd CHAR(1) CHARACTER SET LATIN NOT CASESPECIFIC NOT NULL DEFAULT '',
+      d_timestamp TIMESTAMP(0) FORMAT 'yyyy-mm-ddbhh:mi:ss' NOT NULL DEFAULT CURRENT_TIMESTAMP(0))
+PRIMARY INDEX ( i_dmid );
+
+.IF ERRORCODE <> 0 THEN .QUIT ERRORCODE;
+
+
+/*********************************************************
+	INSERT ALL PURGED RECORDS THAT WILL BE COMBINED
+	INTO TEMP TABLE
+**********************************************************/
+--don't update the combines yet
+
+locking ${EDWDB}.gst_cons_xref for access
+locking ${EDWDB}.gst_game_dtl for access
+locking ${ARCHIVEDB}.gst_game_dtl for access
+insert into ${WORKDB}.GGD_PURGED_VICTIM_SURVIVORS
+select 
+ b.i_dmid                        
+,a.i_dmid
+,c_prop_cd                     
+,c_game_type                   
+,c_game_cd                     
+,f_slot_denom                  
+,d_date                        
+,d_rpt_period                  
+,f_actual_win                  
+,f_avg_bet                     
+,i_avgbet_div                  
+,f_cash_play                   
+,f_marker_play                 
+,i_len_of_play                 
+,f_theoretical                 
+,c_purge_flag
+,d_purge_date
+,''                  
+,current_timestamp(0)   
+from ( sel * from ${EDWDB}.gst_game_dtl
+	where c_purge_flag = 'Y'
+		union all
+	sel * from ${ARCHIVEDB}.gst_game_dtl
+	where c_purge_flag = 'Y' ) a
+
+inner join ${EDWDB}.gst_cons_xref b
+on a.i_dmid = b.i_xref_dmid
+and b.i_dmid <> b.i_xref_dmid
+;
+
+
+.IF ERRORCODE <> 0 THEN .QUIT ERRORCODE;
+.QUIT; 
+
+EOF
+
+rc=$?
+exit ${rc}

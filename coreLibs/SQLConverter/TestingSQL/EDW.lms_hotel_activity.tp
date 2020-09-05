@@ -1,0 +1,432 @@
+#***********************************************************************************************************
+# Script Name        : lms_hotel_activity.tp
+# Example(S)         :
+# Purpose            :Tpump script to load EDW_MAIN.lms_hotel_activity table
+# varchar(50) Written:03/14/2007
+# Author             :LBM
+# Modifications      : 03/10/14 krishna teja  
+#                      INC000000360868 as per dorothy request
+#                      Added c_original_wing_cd field (edw_archive.lms_hotel_activity & edw_main.lms_hotel) 
+#                      which maintains the history of the wing_cd 
+#
+#               02/27/2018   NIIT (LN) 
+#               HST project: As per the requirements for HST project 
+#               changed length for columns in ".LAYOUT LMSHOTELACTIVITY":
+#               
+#               c_cancel_id     from VARCHAR(50)  to VARCHAR(64)
+#
+#
+#               03/11/2018 NIIT(LN)  
+#				HST project: Added the logic to identify the source system. 
+#                          e.g. source id : 10 for LMS  and 23 for HMS   
+# 
+#                                     
+# **************************************************************************************************************
+# Parse command line arguments
+. ${CONFIGDIR}/parseArg
+
+# Check for required arguments
+REQUIRE_LOGON
+REQUIRE_SESSIONS
+REQUIRE_CMSCd
+REQUIRE_propCd
+REQUIRE_fileName
+
+# Set Local Variables
+INPUT_FILE=${fileName}
+typeset -u PROP_CD=${propCd}
+typeset -u HTACT_CD=${CMSCd}
+integer error_return=8
+SOURCE_ID=${allItems}
+
+#bteq<<!
+#.RUN FILE ${LOGONDIR}/${LOGON};
+
+#SELECT count(*) FROM workdb.HOTEL_WING_CODES;
+#.IF ERRORCODE = 0 THEN DELETE FROM ${WORKDB}.HOTEL_WING_CODES;
+
+#SELECT count(*) FROM workdb.HOTEL_ACT_STATUS_CODE;
+#.IF ERRORCODE = 0 THEN DELETE FROM ${WORKDB}.HOTEL_ACT_STATUS_CODE;
+
+#.IF ERRORCODE <> 0 THEN QUIT 8;
+#.QUIT;
+
+#!
+
+
+
+tpump <<EOD
+.LOGTABLE ${WORKDB}.lms_activity_${HTACT_CD}_log;
+.RUN FILE ${LOGONDIR}/${LOGON};
+
+.NAME $(ksh ${LIBDIR}/tpumpName.ksh $$);
+
+.BEGIN LOAD SESSIONS ${SESSIONS}
+ ERRORTABLE ${WORKDB}.lms_activity_${HTACT_CD}_et
+ SERIALIZE ON
+ ROBUST OFF;
+
+.LAYOUT LMSHOTELACTIVITY;
+.field      c_activity_status         * varchar(50); 
+.field      c_activity_desc           * varchar(50); 
+.field      c_prop_cd                 * varchar(50)   KEY;
+.field      f_reserve_id              * varchar(50)   KEY; 
+.field      c_pri_cas_guest_id        * varchar(50);
+.field      c_sec_cas_guest_id        * varchar(50);
+.field      c_first_name              * varchar(50);
+.field      c_last_name               * varchar(50);
+.field      d_transaction_dt          * varchar(50);
+.field      d_reserve_dt              * varchar(50);
+.field      d_cancel_dt               * varchar(50);
+.field      d_arrival_dt              * varchar(50);
+.field      d_departure_dt            * varchar(50);
+.field      c_confirm_id              * varchar(50);
+.field      c_cancel_id               * varchar(64);
+.field      c_share_id                * varchar(50);
+.field      i_nbr_shares              * varchar(50);
+.field      c_reservation_agent_id    * varchar(50);
+.field      c_cancel_agent_id         * varchar(50);
+.field      c_checkin_agent_id        * varchar(50);
+.field      c_checkout_agent_id       * varchar(50);
+.field      c_transaction_agent_id    * varchar(50); 
+.field      c_original_wing_cd        * varchar(50);
+.field      c_wing_desc               * varchar(50);
+.field      c_original_rm_type        * varchar(50); 
+.field      c_rm_nbr                  * varchar(50); 
+.field      i_rm_night                * varchar(50);
+.field      i_nbr_rooms               * varchar(50);
+.field      i_nbr_occupants           * varchar(50);
+.field      c_source_cd               * varchar(50);
+.field      c_rate_plan               * varchar(50);
+.field      c_group_cd                * varchar(50); 
+.field 	    i_group_id                * varchar(50); 
+.field      c_state_cd                * varchar(50);
+.field      c_zip_cd                  * varchar(50);
+.field      c_offer_id                * varchar(50); 
+.field      i_customer_segment        * varchar(50);
+.field      c_tracking                * varchar(50); 
+.field      c_settle_method           * varchar(50); 
+.field      c_credit_card_nbr         * varchar(50);
+.field      c_credit_card_exp_dt      * varchar(50);
+.field      c_credit_card_auth_nbr    * varchar(50);
+.field      f_deposit_amt_req         * varchar(50);
+.field      f_deposit_credit_card_chg * varchar(50);
+.field      f_room_rev_reserved       * varchar(50);
+.field      f_room_tax_reserved       * varchar(50);
+.field      d_checkin_dt              * varchar(50) NULLIF d_checkin_dt = '01/01/0001';
+.field      d_checkin_time            * varchar(50);
+.field      c_checkin_location        * varchar(50);
+.field      d_checkout_dt             * varchar(50) NULLIF d_checkout_dt = '01/01/0001';
+.field      d_checkout_time           * varchar(50);
+.field      c_checkout_location       * varchar(50);
+.field      f_room_rev                * varchar(50);
+.field      f_fb_rev                  * varchar(50);
+.field      f_other_rev               * varchar(50);
+.field      f_comp_room_rev           * varchar(50);
+.field      f_comp_fb_rev             * varchar(50);
+.field      f_comp_other_rev          * varchar(50);
+.field      c_occupant_type           * varchar(50);
+.field      c_address_1               * varchar(50);
+.field      c_address_2               * varchar(50);
+.field      c_city                    * varchar(50);
+.field      c_confirm_email           * varchar(100);
+.field      d_dob                     * varchar(50);
+.field      c_email_contact_flag      * varchar(50);
+
+
+.DML LABEL UPSERTS
+DO INSERT FOR MISSING UPDATE ROWS;
+UPDATE ${EDWDB}.LMS_HOTEL_ACTIVITY
+SET c_activity_status              = :c_activity_status
+      ,c_pri_cas_guest_id          = :c_pri_cas_guest_id
+      ,c_sec_cas_guest_id          = :c_sec_cas_guest_id
+      ,i_xref_dmid                 = :c_pri_cas_guest_id /*i_xref_dmid*/
+      ,i_sec_xref_dmid             = :c_sec_cas_guest_id /*i_sec_xref_dmid*/
+      ,c_first_name                = :c_first_name
+      ,c_last_name                 = :c_last_name
+      ,d_transaction_dt            = cast(cast(:d_transaction_dt as char(10)) as date format 'mm/dd/yyyy')
+      ,d_reserve_dt                = cast(cast(:d_reserve_dt as char(10)) as date format 'mm/dd/yyyy')        
+      ,d_cancel_dt                 = cast(cast(:d_cancel_dt as char(10)) as date format 'mm/dd/yyyy') 
+      ,d_arrival_dt                = cast(cast(:d_arrival_dt as char(10)) as date format 'mm/dd/yyyy') 
+      ,d_departure_dt              = cast(cast(:d_departure_dt as char(10)) as date format 'mm/dd/yyyy') 
+      ,c_confirm_id                = :c_confirm_id
+      ,c_cancel_id                 = :c_cancel_id
+ /*   ,c_share_id                  = :c_share_id
+      ,i_nbr_shares                = :i_nbr_shares   */
+/* Changed this per Andy Chance 6/26/08   */
+      ,c_reservation_agent_id      = :c_reservation_agent_id
+      ,c_cancel_agent_id           = :c_cancel_agent_id 
+      ,c_checkin_agent_id          = :c_checkin_agent_id
+      ,c_checkout_agent_id         = :c_checkout_agent_id 
+      ,c_transaction_agent_id      = :c_transaction_agent_id
+      ,c_wing_cd                   = :c_original_wing_cd
+      ,c_rm_type                   = :c_original_rm_type
+      ,c_rm_nbr                    = :c_rm_nbr
+      ,i_rm_night                  = :i_rm_night
+      ,i_nbr_rooms                 = :i_nbr_rooms
+      ,i_nbr_occupants             = :i_nbr_occupants
+      ,c_occupant_type             = 999
+      ,c_source_cd                 = :c_source_cd
+      ,c_rate_plan                 = :c_rate_plan
+      ,c_group_cd                  = :c_group_cd
+      ,c_group_type                = 999
+      ,c_address_1                 = :c_address_1
+      ,c_address_2                 = :c_address_2
+      ,c_city                      = :c_city
+      ,c_state_cd                  = :c_state_cd 
+      ,c_zip_cd                    = :c_zip_cd 
+      ,d_dob                       = cast(cast(:d_dob as char(10)) as date format 'mm/dd/yyyy')
+      ,c_confirm_email             = :c_confirm_email
+      ,c_email_contact_flag        = :c_email_contact_flag
+      ,c_offer_id                  = :c_offer_id
+      ,i_customer_segment          = :i_customer_segment
+      ,c_tracking                  = :c_tracking 
+      ,c_settle_method             = :c_settle_method
+      ,c_credit_card_nbr           = :c_credit_card_nbr
+      ,c_credit_card_exp_dt        = :c_credit_card_exp_dt
+      ,c_credit_card_auth_nbr      = :c_credit_card_auth_nbr
+      ,f_deposit_amt_req           = :f_deposit_amt_req
+      ,f_deposit_credit_card_chg   = :f_deposit_credit_card_chg
+      ,f_room_rev_reserved         = :f_room_rev_reserved
+      ,f_room_tax_reserved         = :f_room_tax_reserved
+      ,d_checkin_dt                = cast(cast(:d_checkin_dt as char(10)) as date format 'mm/dd/yyyy') 
+      ,d_checkin_time              = :d_checkin_time
+      ,c_checkin_location          = :c_checkin_location
+      ,d_checkout_dt               = cast(cast(:d_checkout_dt as char(10)) as date format 'mm/dd/yyyy') 
+      ,d_checkout_time             = :d_checkout_time
+      ,c_checkout_location         = :c_checkout_location
+      ,f_room_rev                  = :f_room_rev
+      ,f_fb_rev                    = :f_fb_rev
+      ,f_other_rev                 = :f_other_rev
+      ,f_comp_room_rev             = :f_comp_room_rev
+      ,f_comp_fb_rev               = :f_comp_fb_rev
+      ,f_comp_other_rev            = :f_comp_other_rev
+      ,d_timestamp                 = current_timestamp(0)
+	  ,i_source_id				   = ${SOURCE_ID}
+      
+WHERE f_reserve_id                 = :f_reserve_id
+AND   c_prop_cd                    = :c_prop_cd
+; 
+
+INSERT INTO ${EDWDB}.lms_hotel_activity
+(      f_reserve_id
+      ,c_prop_cd
+      ,c_activity_status
+      ,c_pri_cas_guest_id
+      ,c_sec_cas_guest_id
+      ,i_xref_dmid
+      ,i_sec_xref_dmid
+      ,c_first_name
+      ,c_last_name
+      ,d_transaction_dt
+      ,d_reserve_dt 
+      ,d_cancel_dt 
+      ,d_arrival_dt
+      ,d_departure_dt
+      ,c_confirm_id
+      ,c_cancel_id
+      ,c_share_id
+      ,i_nbr_shares
+      ,c_reservation_agent_id
+      ,c_cancel_agent_id 
+      ,c_checkin_agent_id
+      ,c_checkout_agent_id 
+      ,c_transaction_agent_id 
+      ,c_original_wing_cd
+      ,c_wing_cd
+      ,c_original_rm_type
+      ,c_rm_type
+      ,c_rm_nbr
+      ,i_rm_night
+      ,i_nbr_rooms
+      ,i_nbr_occupants
+      ,c_occupant_type
+      ,c_source_cd
+      ,c_rate_plan
+      ,c_group_cd 
+      ,c_group_type 
+      ,c_address_1
+      ,c_address_2
+      ,c_city
+      ,c_state_cd 
+      ,c_zip_cd 
+      ,d_dob
+      ,c_confirm_email
+      ,c_email_contact_flag
+      ,c_offer_id 
+      ,i_customer_segment
+      ,c_tracking 
+      ,c_settle_method 
+      ,c_credit_card_nbr
+      ,c_credit_card_exp_dt 
+      ,c_credit_card_auth_nbr 
+      ,f_deposit_amt_req
+      ,f_deposit_credit_card_chg 
+      ,f_room_rev_reserved
+      ,f_room_tax_reserved
+      ,d_checkin_dt 
+      ,d_checkin_time
+      ,c_checkin_location
+      ,d_checkout_dt 
+      ,d_checkout_time
+      ,c_checkout_location
+      ,f_room_rev 
+      ,f_fb_rev
+      ,f_other_rev
+      ,f_comp_room_rev
+      ,f_comp_fb_rev
+      ,f_comp_other_rev 
+      ,c_quality_cd
+      ,d_timestamp
+	  ,i_source_id
+     
+)
+values
+(      :f_reserve_id
+    ,:c_prop_cd
+    ,:c_activity_status
+    ,:c_pri_cas_guest_id
+    ,:c_sec_cas_guest_id
+    ,:c_pri_cas_guest_id /*i_xref_dmid*/
+    ,:c_sec_cas_guest_id /*i_sec_xref_dmid*/
+    ,:c_first_name
+    ,:c_last_name
+    ,cast(cast(:d_transaction_dt as char(10)) as date format 'mm/dd/yyyy')
+    ,cast(cast(:d_reserve_dt as char(10)) as date format 'mm/dd/yyyy')
+    ,cast(cast(:d_cancel_dt as char(10)) as date format 'mm/dd/yyyy')
+    ,cast(cast(:d_arrival_dt as char(10)) as date format 'mm/dd/yyyy')
+    ,cast(cast(:d_departure_dt as char(10)) as date format 'mm/dd/yyyy')
+    ,:c_confirm_id
+    ,:c_cancel_id
+    ,:c_share_id
+    ,cast(:i_nbr_shares AS INTEGER)
+    ,:c_reservation_agent_id
+    ,:c_cancel_agent_id
+    ,:c_checkin_agent_id
+    ,:c_checkout_agent_id
+    ,:c_transaction_agent_id
+    ,:c_original_wing_cd
+    ,:c_original_wing_cd
+    ,:c_original_rm_type
+    ,:c_original_rm_type
+    ,:c_rm_nbr
+    ,cast(:i_rm_night AS INTEGER)
+    ,cast(:i_nbr_rooms AS INTEGER)
+    ,cast(:i_nbr_occupants AS INTEGER)
+    ,:c_occupant_type
+    ,:c_source_cd
+    ,:c_rate_plan
+    ,:c_group_cd
+    ,999
+    ,:c_address_1
+    ,:c_address_2
+    ,:c_city
+    ,:c_state_cd
+    ,:c_zip_cd
+    ,cast(cast(:d_dob as char(10)) as date format 'mm/dd/yyyy')
+    ,:c_confirm_email
+    ,:c_email_contact_flag
+    ,:c_offer_id
+    ,cast(:i_customer_segment AS INTEGER)
+    ,:c_tracking
+    ,:c_settle_method
+    ,:c_credit_card_nbr
+    ,:c_credit_card_exp_dt
+    ,:c_credit_card_auth_nbr
+    ,cast(:f_deposit_amt_req AS FLOAT)
+    ,cast(:f_deposit_credit_card_chg AS FLOAT) 
+    ,cast(:f_room_rev_reserved AS FLOAT)
+    ,cast(:f_room_tax_reserved AS FLOAT)
+    ,cast(cast(:d_checkin_dt as char(10)) as date format 'mm/dd/yyyy')
+    ,:d_checkin_time
+    ,:c_checkin_location
+    ,cast(cast(:d_checkout_dt as char(10)) as date format 'mm/dd/yyyy')
+    ,:d_checkout_time
+    ,:c_checkout_location
+    ,cast(:f_room_rev AS FLOAT)
+    ,cast(:f_fb_rev AS FLOAT)
+    ,cast(:f_other_rev AS FLOAT)
+    ,cast(:f_comp_room_rev AS FLOAT)
+    ,cast(:f_comp_fb_rev AS FLOAT)
+    ,cast(:f_comp_other_rev AS FLOAT) 
+    ,''
+    ,current_timestamp(0)
+	,${SOURCE_ID}
+)
+;
+
+
+.DML LABEL WING_CODES
+DO INSERT FOR MISSING UPDATE ROWS
+IGNORE MISSING UPDATE ROWS
+IGNORE DUPLICATE UPDATE ROWS
+IGNORE EXTRA UPDATE ROWS;
+update ${WORKDB}.HOTEL_WING_CODES
+SET c_wing_desc       = :c_wing_desc
+
+WHERE c_wing_cd       = :c_wing_cd
+and   c_prop_cd       = :c_prop_cd
+;
+
+insert into ${WORKDB}.HOTEL_WING_CODES
+( c_wing_cd
+ ,c_prop_cd
+ ,c_wing_desc
+)
+values
+( :c_wing_cd
+ ,:c_prop_cd
+ ,:c_wing_desc
+)
+;
+
+.DML LABEL ACTIVITY_STATUS
+DO INSERT FOR MISSING UPDATE ROWS
+IGNORE MISSING UPDATE ROWS
+IGNORE DUPLICATE UPDATE ROWS
+IGNORE EXTRA UPDATE ROWS;
+update ${WORKDB}.HOTEL_ACT_STATUS_CODE
+SET c_activity_desc     = :c_activity_desc
+
+WHERE c_activity_status = :c_activity_status
+and   c_prop_cd         = :c_prop_cd
+;
+
+insert into ${WORKDB}.HOTEL_ACT_STATUS_CODE
+( c_activity_status
+ ,c_prop_cd
+ ,c_activity_desc
+)
+values
+( :c_activity_status
+ ,:c_prop_cd
+ ,:c_activity_desc
+)
+;
+      
+.IMPORT INFILE ${INPUT_FILE}
+  FORMAT VARTEXT '|' 
+  LAYOUT LMSHOTELACTIVITY
+  APPLY UPSERTS
+/*  APPLY WING_CODES where c_wing_cd is not null
+  APPLY ACTIVITY_STATUS where c_activity_status is not null */
+;
+
+.END LOAD;
+.LOGOFF;
+EOD
+
+rc=$?
+if [[ ${rc} -ne 0 ]]; then
+  print "*** Load of LMS hotel activity failed (${rc})" >&2
+  exit 8
+fi
+
+ksh ${TDATDIR}/check_for_error_table.btq -l ${LOGON} ${WORKDB}.lms_activity_${HTACT_CD}_et
+rc=$?
+if [[ ${rc} -ne 0 ]]; then
+  print "*** Error table lms_hotel_activity_new_et exists" >&2
+  exit 8
+fi
+
+exit

@@ -1,0 +1,88 @@
+#*********************************************************************
+# Script Name:	gst_game_dtl_combine.btq
+# Example(S):	
+# Purpose:	BTEQ script to delete victim accounts and update records
+#		from table
+# Written:	02/8/2012
+# Author:	LBM
+# Modifications: 
+# ********************************************************************
+. $CONFIGDIR/parseArg
+
+# Check for valid arguments
+REQUIRE_LOGON
+
+bteq <<EOF
+.RUN FILE $LOGONDIR/$LOGON;
+.SET ERRORLEVEL 3807 SEVERITY 0;
+
+
+/*********************************************************
+	UPDATE (RE-AGGREGATE) RECORDS IN BASE
+	**THIS STEP IS CONSIDERED STANDARD 'UPDATE'**
+**********************************************************/
+--delete survivor accounts that will be updated from base
+delete from ${EDWDB}.gst_game_dtl a
+where exists (
+	sel *
+	from ${WORKDB}.ggd_purged_victim_survivors b
+	where a.i_dmid 		= b.i_dmid
+	and   a.c_prop_cd 	= b.c_prop_cd
+	and   a.c_game_cd	= b.c_game_cd
+	and   a.d_date		= b.d_date
+	and   a.f_slot_denom	= b.f_slot_denom
+);
+
+.IF ERRORCODE <> 0 THEN .QUIT ERRORCODE;
+
+
+--delete victim accounts that will be combined from base
+delete from ${EDWDB}.gst_game_dtl a
+where exists (
+	sel *
+	from ${WORKDB}.ggd_purged_victim_survivors b
+	where a.i_dmid 		= b.i_xref_dmid
+	and   a.c_prop_cd 	= b.c_prop_cd
+	and   a.c_game_cd	= b.c_game_cd
+	and   a.d_date		= b.d_date
+	and   a.f_slot_denom	= b.f_slot_denom
+);
+
+.IF ERRORCODE <> 0 THEN .QUIT ERRORCODE;
+
+
+--delete survivor accounts that will be updated from archive
+delete from ${ARCHIVEDB}.gst_game_dtl a
+where exists (
+	sel *
+	from ${WORKDB}.ggd_purged_victim_survivors b
+	where a.i_dmid 		= b.i_dmid
+	and   a.c_prop_cd 	= b.c_prop_cd
+	and   a.c_game_cd	= b.c_game_cd
+	and   a.d_date		= b.d_date
+	and   a.f_slot_denom	= b.f_slot_denom
+);
+
+.IF ERRORCODE <> 0 THEN .QUIT ERRORCODE;
+
+
+--delete victim accounts that will be combined from archive
+delete from ${ARCHIVEDB}.gst_game_dtl a
+where exists (
+	sel *
+	from ${WORKDB}.ggd_purged_victim_survivors b
+	where a.i_dmid 		= b.i_xref_dmid
+	and   a.c_prop_cd 	= b.c_prop_cd
+	and   a.c_game_cd	= b.c_game_cd
+	and   a.d_date		= b.d_date
+	and   a.f_slot_denom	= b.f_slot_denom
+);
+
+
+.IF ERRORCODE <> 0 THEN .QUIT ERRORCODE;
+.QUIT; 
+
+EOF
+
+rc=$?
+exit ${rc}

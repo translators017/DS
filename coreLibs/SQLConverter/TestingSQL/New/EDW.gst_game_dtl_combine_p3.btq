@@ -1,0 +1,102 @@
+#*********************************************************************
+# Script Name:	gst_game_dtl_combine.btq
+# Example(S):	
+# Purpose:	BTEQ script to gather all overlapping gaming detail
+# Written:	03/12/2012
+# Author:	LBM
+# Modifications: 
+# ********************************************************************
+. $CONFIGDIR/parseArg
+
+# Check for valid arguments
+REQUIRE_LOGON
+
+bteq <<EOF
+.RUN FILE $LOGONDIR/$LOGON;
+.SET ERRORLEVEL 3807 SEVERITY 0;
+
+
+/*********************************************************
+	INSERT RECORDS TO BE RE-AGGREGATED IN TEMP DUE TO 
+	OVERLAPPING GAMING
+**********************************************************/
+--could possibly have conflicting purge flags (Y and N)
+
+locking ${EDWDB}.gst_game_dtl for access
+locking ${ARCHIVEDB}.gst_game_dtl for access
+insert into ${WORKDB}.ggd_purged_victim_survivors
+select distinct
+  i_dmid                        
+ ,i_dmid
+ ,c_prop_cd                     
+ ,c_game_type                   
+ ,c_game_cd                     
+ ,f_slot_denom                  
+ ,d_date                        
+ ,d_rpt_period                  
+ ,f_actual_win                  
+ ,f_avg_bet                     
+ ,i_avgbet_div                  
+ ,f_cash_play                   
+ ,f_marker_play                 
+ ,i_len_of_play                 
+ ,f_theoretical                 
+ ,c_purge_flag
+ ,d_purge_date
+ ,''                  
+,d_timestamp   
+from ${EDWDB}.gst_game_dtl a
+where exists (
+	sel i_dmid, c_prop_cd, d_date, c_game_cd, f_slot_denom
+	from ${WORKDB}.ggd_purged_victim_survivors b
+	where a.i_dmid		= b.i_dmid
+	and   a.c_prop_cd 	= b.c_prop_cd
+	and   a.c_game_cd  	= b.c_game_cd
+	and   a.d_date		= b.d_date
+	and   a.f_slot_denom	= b.f_slot_denom
+	group by 1,2,3,4,5
+)
+
+UNION ALL
+
+select distinct
+  i_dmid                        
+ ,i_dmid
+ ,c_prop_cd                     
+ ,c_game_type                   
+ ,c_game_cd                     
+ ,f_slot_denom                  
+ ,d_date                        
+ ,d_rpt_period                  
+ ,f_actual_win                  
+ ,f_avg_bet                     
+ ,i_avgbet_div                  
+ ,f_cash_play                   
+ ,f_marker_play                 
+ ,i_len_of_play                 
+ ,f_theoretical                 
+ ,c_purge_flag
+ ,d_purge_date
+ ,''                  
+,d_timestamp   
+from ${ARCHIVEDB}.gst_game_dtl a
+where exists (
+	sel i_dmid, c_prop_cd, d_date, c_game_cd, f_slot_denom
+	from ${WORKDB}.ggd_purged_victim_survivors b
+	where a.i_dmid		= b.i_dmid
+	and   a.c_prop_cd 	= b.c_prop_cd
+	and   a.c_game_cd  	= b.c_game_cd
+	and   a.d_date		= b.d_date
+	and   a.f_slot_denom	= b.f_slot_denom
+	group by 1,2,3,4,5
+)
+;
+
+
+.IF ERRORCODE <> 0 THEN .QUIT ERRORCODE;
+.QUIT; 
+
+EOF
+
+rc=$?
+exit ${rc}

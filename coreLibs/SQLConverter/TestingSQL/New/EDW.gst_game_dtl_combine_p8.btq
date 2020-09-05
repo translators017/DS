@@ -1,0 +1,53 @@
+#*********************************************************************
+# Script Name:	gst_game_dtl_combine.btq
+# Example(S):	
+# Purpose:	BTEQ script to capture all purge change records in case
+#		of rollback
+# Written:	05/18/2012
+# Author:	LBM
+# Modifications: 
+# ********************************************************************
+. $CONFIGDIR/parseArg
+
+# Check for valid arguments
+REQUIRE_LOGON
+
+bteq <<EOF
+.RUN FILE $LOGONDIR/$LOGON;
+.SET ERRORLEVEL 3807 SEVERITY 0;
+
+/*********************************************************
+	IINSERT ALL DAILY RECORDS CHANGED BY PURGE PROCESS
+**********************************************************/
+insert into ${EDWDB}.GST_GAME_DTL_PURGE_ROLLBACK
+select 
+ i_dmid                        
+,i_xref_dmid
+,c_prop_cd                     
+,c_game_type                   
+,c_game_cd                     
+,f_slot_denom                  
+,d_date                        
+,d_rpt_period                  
+,f_actual_win                  
+,f_avg_bet                     
+,i_avgbet_div                  
+,f_cash_play                   
+,f_marker_play                 
+,i_len_of_play                 
+,f_theoretical                 
+,c_purge_flag
+,d_purge_date
+,''       
+,d_timestamp   
+from ${WORKDB}.GGD_PURGED_VICTIM_SURVIVORS
+;
+
+
+.IF ERRORCODE <> 0 THEN .QUIT ERRORCODE;
+.QUIT; 
+
+EOF
+
+rc=$?
+exit ${rc}

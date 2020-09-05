@@ -1,0 +1,167 @@
+<configurations>
+	<configuration name="Common">
+		<properties>
+			<property name="noSqlPath" value="C:/dsdemo" />
+			<property name="pythonPath" value="C:/Python" />
+			<property name="demoVersion" value="no"/>
+			<property name="LDAP" value="No" />
+		</properties>
+	</configuration>
+	<configuration name="Partner Image">
+		<properties>
+			<property name="NA" value="" />
+		</properties>
+	</configuration>
+	<configuration name="CodeGenerator">
+		<properties>
+			<property name="Apache Spark (Python)" value="" />
+			<property name="Apache Spark (Scala)" value="" />
+			<property name="AWS Glue (Python)" value="" />
+			<property name="AWS Glue (Scala)" value="" />
+			<property name="Azure Data Flow" value="" />
+			<property name="Azure Databricks" value="" />
+			<property name="GCP Dataflow (Beam Java)" value="" />
+			<property name="GCP Dataflow (Beam Python)" value="" />
+			<property name="GCP Dataproc" value="" />
+			<property name="Python (Pandas)" value="" />
+			<property name="ELT Stored Procs" value="" />
+			<property name="Talend" value="" />
+			<property name="Informatica PC (9.6 +)" value="" />
+			<property name="Informatica BDM (10.2.0 +)" value="" />
+			<property name="Informatica IICS" value="" />
+			<property name="Datastage" value="" />
+			<property name="SSIS" value="" />
+
+		</properties>
+	</configuration>
+	<configuration name="CodeReverseEngineering">
+		<properties>
+			<property name="Informatica PC (9.6 +)" value="" />
+			<property name="Informatica BDM (10.2.0 +)" value="" />
+            <property name="Datastage" value="" /> 
+			<property name="SSIS" value="" />
+			<property name="Talend" value="" />
+			<property name="Pentaho" value="" />
+		</properties>
+	</configuration>
+	<configuration name="CodeDIRemediator">
+		<properties>
+			<property name="Flat File" value="" />
+			<property name="Impala" value="" />
+			<property name="Hadoop - HDFS" value="" />
+			<property name="Hadoop - HIVE" value="" />
+			<property name="Azure SQL DW" value="" />
+			<property name="Snowflake DW" value="" />
+			<property name="Snowflake Cloud DW" value="" />
+			<property name="Salesforce" value="" />
+			<property name="Redshift" value="" />
+			<property name="Oracle" value="" />
+			<property name="Netezza" value="" />
+			<property name="Teradata" value="" />
+			<property name="DB2" value="" />
+			<property name="ODBC" value="" />
+			<property name="Microsoft SQL Server" value="" />
+			<property name="PWX" value="" />
+			<property name="VERTICA" value="" />
+			<property name="BigQuery" value="" />
+		</properties>
+	</configuration>
+	<configuration name="Cataloging Tools">
+		<properties>
+			<property name="Informatica EDC" value="" />
+			<property name="IBM IGC" value="" />
+			<property name="AWS Glue Catalog" value="" />
+			<property name="Azure Data Catalog" value="" />
+			<property name="Talend Data Catalog" value="" />
+		</properties>
+	</configuration>
+	<configuration name="TargetDBStoredProc">
+		<properties>
+			<property name="AWS Redshift" value="" />
+			<property name="Azure SQL DW (Synapse)" value="" />
+			<property name="GCP BigQuery" value="" />
+			<property name="Snowflake DW" value="" />
+			<property name="Snowflake Cloud DW" value="" />
+			<property name="Impala" value="" />
+			<property name="Hadoop - HIVE" value="" />
+			<property name="Microsoft SQL Server" value="" />
+			<property name="Oracle" value="" />
+			<property name="Netezza" value="" />
+			<property name="Teradata" value="" />
+			<property name="DB2" value="" />
+			<property name="VERTICA" value="" />
+		</properties>
+	</configuration>
+	<configuration name="Cloud DBs">
+		<properties>
+			<property name="Amazon Redshift" value="Relational - Amazon Redshift" />
+			<property name="BigQuery" value="BigQuery" />
+			<property name="Azure SQL DB" value="Relational - Azure SQL DB" />
+			<property name="Azure SQL Data Warehouse" value="Relational - Azure SQL Data Warehouse" />
+			<property name="Snowflake" value="Snowflake - Cloud" />
+		</properties>
+	</configuration>
+	<configuration name="NoSQL DBs">
+		<properties>
+			<property name="MongoDb" value="MongoDb" />
+			<property name="Cosmos" value="Cosmos" />
+			<property name="Aurora DB" value="Aurora DB" />
+		</properties>
+	</configuration>
+	<!-- <configuration name="Cloud Storage">
+		<properties>
+			<property name="Azure Blob Storage" value="Cloud Storage" />
+			<property name="S3" value="Cloud Storage" />
+			<property name="Google Cloud Storage" value="Cloud Storage" />
+		</properties>
+	</configuration> -->
+	<configuration name="Relational DBs">
+		<properties>
+			<property name="Oracle" value="Relational - Oracle" />
+			<property name="SQL Server" value="Relational - SQL Server" />
+			<property name="DB2 LUW" value="Relational - DB2 LUW" />
+			<property name="Teradata" value="Relational - Teradata" />
+			<property name="Netezza" value="Relational - Netezza" />
+			<property name="ODBC" value="Relational - ODBC" />
+			<property name="PostgreSQL" value="Relational - PostgreSQL" />
+			<property name="MySQL" value="Relational - MySQL" />
+			<property name="Sybase" value="Relational - Sybase" />
+			<property name="MonetDB" value="Relational - MONETDB" />
+		</properties>
+	</configuration>
+	<configuration name="Bigdata">
+		<properties>
+			<property name="Hadoop - HDFS" value="Hadoop - HDFS" />
+			<property name="Hadoop - Hive" value="Hadoop - Hive" />
+			<property name="Parquet" value="Files - Parquet" />
+			<property name="Avro" value="Files - Avro" />
+		</properties>
+	</configuration>
+	<configuration name="Files">
+		<properties>
+			<property name="JSON" value="Files - JSON" />
+			<property name="Delimited" value="Files - Delimited" />
+			<property name="Fixed Width" value="Files - Fixed Width" />
+			<property name="XML" value="Files - XML" />
+			<property name="VSAM" value="Non Relational - VSAM" />
+			<property name="Sequential" value="Non Relational - Sequential" />
+		</properties>
+	</configuration>
+	<configuration name="ProcessFlow">
+		<properties>
+			<property name="Apache Airflow" value="" />
+			<property name="Talend (Job)" value="" />
+			<property name="Informatica (Workflow)" value="" />
+			<property name="SSIS (Control Flow)" value="" />
+			<property name="Datastage (Sequence Job)" value="" />
+		</properties>
+	</configuration>
+	<configuration name="BITools">
+		<properties>
+			<property name="Cognos" value="" />
+			<property name="MSTR" value="" />
+			<property name="Qlik Sense" value="" />
+			<property name="Qlik View" value="" />
+		</properties>
+	</configuration>
+</configurations>

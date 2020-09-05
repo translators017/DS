@@ -1,0 +1,140 @@
+/*******************Designer Area - Starts here********************/
+.root-size{
+	min-width: 148px;
+	max-width: 148px;
+}
+
+.embed-size {
+	min-width: 130px;
+	max-width: 130px;
+}
+
+.denormalize-size{
+	min-width: 120px;
+	max-width: 120px;
+}
+
+.subset-size{
+	min-width: 140px;
+	max-width: 140px;
+}
+
+.embedRef-size{
+	min-width: 75px;
+	max-width: 75px;
+}
+
+/*******************Designer Area - Ends here********************/
+
+
+/*******************Condition Modal Window - Starts here********************/
+.tabs-nav {
+  padding: 0;
+  margin: 0 auto;
+  width: 70%;
+  text-align: center;
+}
+
+.tabs-nav li {
+  display: inline-block;
+  /* padding: 10px; */
+  /* background: #aaa; */
+}
+
+.tabs-nav li a {
+  text-decoration: none;
+  /* color: white; */
+}
+
+.tabs-stage {
+  /*border-top: 1px solid black;*/
+  /*margin: 20px auto;*/
+}
+
+.cond-tab-ul{
+	display: flex;
+    position: relative;
+    /* overflow-x: auto; */
+    /* overflow-y: hidden; */
+    height: 100%;
+    width: 100%;
+    background-color: #fff;
+    margin: 0 auto;
+    white-space: nowrap;
+    border-bottom: 2px solid #e1e1e1;
+}
+
+.cond-tab-li{	
+	width: 20%;
+    margin-left: 0px;
+    /* flex-grow: 1; */
+    /* width: 20%; */
+    /* display: inline-block; */
+    text-align: center;
+    line-height: 38px;
+    height: 38px;
+    padding: 0;
+    margin: 0;
+    text-transform: uppercase;
+    list-style-type: none;
+}
+
+.cond-tab-a{
+	font-weight: 700;
+    /* color: #fff; */
+    /* color: rgba(238,110,115,0.7); */
+    color: #1d2124;
+    border-right: 1px solid #fff;
+    text-transform: none;    
+    display: block;
+    width: 100%;
+    height: 100%;
+    /* padding: 0 24px; */
+    font-size: 14px;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    /* -webkit-transition: color .28s ease, background-color .28s ease; */
+    transition: color .28s ease, background-color .28s ease;
+    padding: 0 12px;
+}
+
+.tabs-nav li.tab-active {
+    /* background: #e0b6b6; */
+    border-bottom: 2px solid #e0b6b6;
+}
+
+.cond-tab-a:hover{
+	color: #1d2124 ! important;
+	text-decoration: underline!important;
+}
+
+.tab-none {
+	display: none;
+}
+
+.cond-input-area {
+	display: block;
+    width: 100%;
+    padding: .375rem .75rem;
+    /*font-size: 1rem;*/
+    line-height: 1.5;
+    color: #495057;
+    background-color: #fff;
+    background-clip: padding-box;
+    border: 1px solid #b3b7bb;
+    border-radius: .25rem;
+    border-bottom: 1px solid #b3b7bb;
+    transition: border-color .15s ease-in-out,box-shadow .15s ease-in-out;
+}
+
+/*******************Condition Modal Window - Ends here********************/
+
+/*******************Embed As Reference - CheckBox - Starts here********************/
+
+.custom-control-label::before {
+	background-color: #2ab9a5!important;
+    /*border: 1px solid #404240!important;*/
+}
+
+/*******************Embed As Reference - CheckBox - Ends here********************/
+

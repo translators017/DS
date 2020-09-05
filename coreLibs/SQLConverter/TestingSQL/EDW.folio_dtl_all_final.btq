@@ -1,0 +1,206 @@
+#!/usr/bin/ksh
+#############################################################################################
+# Script Name  : EDW.folio_dtl_all_final.btq
+# Purpose      : This script inserts data in EDW tables with Bteq utility.
+#
+# Written      : 11/19/2018
+# Author       : Nishit Bandapati 
+# Modifications:                 
+#############################################################################################
+
+. ${CONFIGDIR}/parseArg
+
+#############################################################################################
+# SET LOCAL VARIABLES
+#############################################################################################
+
+bteq <<EOD
+
+.RUN FILE ${LOGONDIR}/${LOGON};
+.SET WIDTH 150;
+.SESSIONS 20;
+
+/********************************************************************************************
+Below query will update those records in EDW lms_folio_dtl_all table for all the properties except for dubai property
+If the record is not there then that one is inserted. 
+*********************************************************************************************/
+
+merge into ${EDWDB}.folio_dtl_all using ${EDWDB}.lms_folio_dtl
+on      ${EDWDB}.folio_dtl_all.f_ticket_id  = ${EDWDB}.lms_folio_dtl.f_ticket_id
+AND     ${EDWDB}.folio_dtl_all.f_folio_id   = ${EDWDB}.lms_folio_dtl.f_folio_id
+AND     ${EDWDB}.folio_dtl_all.c_prop_cd    = ${EDWDB}.lms_folio_dtl.c_prop_cd
+AND     ${EDWDB}.folio_dtl_all.i_seq_nbr    = ${EDWDB}.lms_folio_dtl.i_seq_nbr 
+when matched then update 
+set     c_rev_center_cd            = ${EDWDB}.lms_folio_dtl.c_rev_center_cd
+       ,c_bill_cd                  = ${EDWDB}.lms_folio_dtl.c_bill_cd
+       ,c_bill_cd_desc             = ${EDWDB}.lms_folio_dtl.c_bill_cd_desc
+       ,c_compor_first_name        = ${EDWDB}.lms_folio_dtl.c_compor_first_name
+       ,c_compor_last_name         = ${EDWDB}.lms_folio_dtl.c_compor_last_name
+       ,c_compor_dept              = ${EDWDB}.lms_folio_dtl.c_compor_dept
+       ,c_compor_gl_cd             = ${EDWDB}.lms_folio_dtl.c_compor_gl_cd
+       ,c_cashier_id               = ${EDWDB}.lms_folio_dtl.c_cashier_id
+       ,c_cashier_first_name       = ${EDWDB}.lms_folio_dtl.c_cashier_first_name
+       ,c_cashier_last_name        = ${EDWDB}.lms_folio_dtl.c_cashier_last_name
+       ,i_cashier_emp_id           = ${EDWDB}.lms_folio_dtl.i_cashier_emp_id
+       ,c_cashier_user_profile     = ${EDWDB}.lms_folio_dtl.c_cashier_user_profile
+       ,i_covers                   = ${EDWDB}.lms_folio_dtl.i_covers
+       ,c_comments                 = ${EDWDB}.lms_folio_dtl.c_comments
+       ,c_external_ticket_nbr      = ${EDWDB}.lms_folio_dtl.c_external_ticket_nbr
+       ,d_create_ts                = ${EDWDB}.lms_folio_dtl.d_create_ts
+       ,d_trans_dt                 = ${EDWDB}.lms_folio_dtl.d_trans_dt
+       ,c_meal_period_cd           = ${EDWDB}.lms_folio_dtl.c_meal_period_cd
+       ,c_meal_period_desc         = ${EDWDB}.lms_folio_dtl.c_meal_period_desc
+       ,c_ticket_type_cd           = ${EDWDB}.lms_folio_dtl.c_ticket_type_cd
+       ,c_server_nbr               = ${EDWDB}.lms_folio_dtl.c_server_nbr
+       ,c_split_ticket_flag        = ${EDWDB}.lms_folio_dtl.c_split_ticket_flag
+       ,c_settle_method_cd         = ${EDWDB}.lms_folio_dtl.c_settle_method_cd
+       ,c_settle_method_type       = ${EDWDB}.lms_folio_dtl.c_settle_method_type
+       ,c_settle_method_short_desc = ${EDWDB}.lms_folio_dtl.c_settle_method_short_desc
+       ,c_cc_lead_digit_type       = ${EDWDB}.lms_folio_dtl.c_cc_lead_digit_type
+       ,c_account                  = ${EDWDB}.lms_folio_dtl.c_account
+       ,f_tax_amt                  = ${EDWDB}.lms_folio_dtl.f_tax_amt
+       ,f_tip_amt                  = ${EDWDB}.lms_folio_dtl.f_tip_amt
+       ,f_ticket_amt               = ${EDWDB}.lms_folio_dtl.f_ticket_amt
+       ,c_quality_cd               = ' '
+       ,d_timestamp                = ${EDWDB}.lms_folio_dtl.d_timestamp
+       ,i_source_id                = '10'
+when not matched then insert 
+values (${EDWDB}.lms_folio_dtl.f_ticket_id
+       ,${EDWDB}.lms_folio_dtl.f_folio_id
+       ,${EDWDB}.lms_folio_dtl.c_prop_cd
+       ,${EDWDB}.lms_folio_dtl.i_seq_nbr
+       ,${EDWDB}.lms_folio_dtl.d_create_ts
+       ,${EDWDB}.lms_folio_dtl.d_trans_dt
+       ,${EDWDB}.lms_folio_dtl.c_rev_center_cd
+       ,${EDWDB}.lms_folio_dtl.c_bill_cd
+       ,${EDWDB}.lms_folio_dtl.c_bill_cd_desc
+       ,${EDWDB}.lms_folio_dtl.c_compor_first_name
+       ,${EDWDB}.lms_folio_dtl.c_compor_last_name
+       ,${EDWDB}.lms_folio_dtl.c_compor_dept
+       ,${EDWDB}.lms_folio_dtl.c_compor_gl_cd
+       ,${EDWDB}.lms_folio_dtl.c_cashier_id
+       ,${EDWDB}.lms_folio_dtl.c_cashier_first_name
+       ,${EDWDB}.lms_folio_dtl.c_cashier_last_name
+       ,${EDWDB}.lms_folio_dtl.i_cashier_emp_id
+       ,${EDWDB}.lms_folio_dtl.c_cashier_user_profile
+       ,${EDWDB}.lms_folio_dtl.i_covers
+       ,${EDWDB}.lms_folio_dtl.c_comments
+       ,${EDWDB}.lms_folio_dtl.c_external_ticket_nbr
+       ,${EDWDB}.lms_folio_dtl.c_meal_period_cd
+       ,${EDWDB}.lms_folio_dtl.c_meal_period_desc
+       ,${EDWDB}.lms_folio_dtl.c_ticket_type_cd
+       ,${EDWDB}.lms_folio_dtl.c_server_nbr
+       ,${EDWDB}.lms_folio_dtl.c_split_ticket_flag
+       ,${EDWDB}.lms_folio_dtl.c_settle_method_cd
+       ,${EDWDB}.lms_folio_dtl.c_settle_method_type
+       ,${EDWDB}.lms_folio_dtl.c_settle_method_short_desc
+       ,${EDWDB}.lms_folio_dtl.c_cc_lead_digit_type
+       ,${EDWDB}.lms_folio_dtl.c_account
+       ,${EDWDB}.lms_folio_dtl.f_tax_amt
+       ,${EDWDB}.lms_folio_dtl.f_tip_amt
+       ,${EDWDB}.lms_folio_dtl.f_ticket_amt
+       ,${EDWDB}.lms_folio_dtl.i_invoice_number
+       ,''
+       ,${EDWDB}.lms_folio_dtl.d_timestamp
+	   ,'10');
+
+.IF ERRORCODE <> 0 THEN QUIT 8;
+
+/********************************************************************************************
+Below query will update those records in EDW folio_dtl_all table for dubai property
+If the record is not there then that one is inserted. 
+*********************************************************************************************/
+
+merge into ${EDWDB}.folio_dtl_all using ${EDWDB}.opera_folio_dtl
+on      ${EDWDB}.folio_dtl_all.f_ticket_id  = ${EDWDB}.opera_folio_dtl.f_ticket_id
+AND     ${EDWDB}.folio_dtl_all.f_folio_id   = ${EDWDB}.opera_folio_dtl.f_folio_id
+AND     ${EDWDB}.folio_dtl_all.c_prop_cd    = ${EDWDB}.opera_folio_dtl.c_prop_cd
+AND     ${EDWDB}.folio_dtl_all.i_seq_nbr    = ${EDWDB}.opera_folio_dtl.i_seq_nbr 
+when matched then update 
+set     c_rev_center_cd            = ${EDWDB}.opera_folio_dtl.c_rev_center_cd
+       ,c_bill_cd                  = ${EDWDB}.opera_folio_dtl.c_bill_cd
+       ,c_bill_cd_desc             = ''
+       ,c_compor_first_name        = ''
+       ,c_compor_last_name         = ''
+       ,c_compor_dept              = ''
+       ,c_compor_gl_cd             = ''
+       ,c_cashier_id               = ''
+       ,c_cashier_first_name       = ''
+       ,c_cashier_last_name        = ''
+       ,i_cashier_emp_id           = ''
+       ,c_cashier_user_profile     = ''
+       ,i_covers                   = ''
+       ,c_comments                 = ''
+       ,c_external_ticket_nbr      = ''
+       ,d_create_ts                = ${EDWDB}.opera_folio_dtl.d_create_ts
+       ,d_trans_dt                 = ${EDWDB}.opera_folio_dtl.d_trans_dt
+       ,c_meal_period_cd           = ''
+       ,c_meal_period_desc         = ''
+       ,c_ticket_type_cd           = ''
+       ,c_server_nbr               = ''
+       ,c_split_ticket_flag        = ''
+       ,c_settle_method_cd         = ${EDWDB}.opera_folio_dtl.c_settle_method_cd
+       ,c_settle_method_type       = ${EDWDB}.opera_folio_dtl.c_settle_method_type
+       ,c_settle_method_short_desc = ''
+       ,c_cc_lead_digit_type       = ''
+       ,c_account                  = ''
+       ,f_tax_amt                  = ''
+       ,f_tip_amt                  = ${EDWDB}.opera_folio_dtl.f_tip_amt
+       ,f_ticket_amt               = ${EDWDB}.opera_folio_dtl.f_ticket_amt
+       ,c_quality_cd               = ' '
+       ,d_timestamp                = ${EDWDB}.opera_folio_dtl.d_timestamp
+       ,i_source_id                = ${EDWDB}.opera_folio_dtl.i_source_id  
+when not matched then insert 
+values (${EDWDB}.opera_folio_dtl.f_ticket_id
+       ,${EDWDB}.opera_folio_dtl.f_folio_id
+       ,${EDWDB}.opera_folio_dtl.c_prop_cd
+       ,${EDWDB}.opera_folio_dtl.i_seq_nbr
+       ,${EDWDB}.opera_folio_dtl.d_create_ts
+       ,${EDWDB}.opera_folio_dtl.d_trans_dt
+       ,${EDWDB}.opera_folio_dtl.c_rev_center_cd
+       ,${EDWDB}.opera_folio_dtl.c_bill_cd
+       ,''
+       ,''
+       ,''
+       ,''
+       ,''
+       ,''
+       ,''
+       ,''
+       ,''
+       ,''
+       ,''
+       ,''
+       ,''
+       ,''
+       ,''
+       ,''
+       ,''
+       ,''
+       ,${EDWDB}.opera_folio_dtl.c_settle_method_cd
+       ,${EDWDB}.opera_folio_dtl.c_settle_method_type
+       ,''
+       ,''
+       ,''
+       ,''
+       ,${EDWDB}.opera_folio_dtl.f_tip_amt
+       ,${EDWDB}.opera_folio_dtl.f_ticket_amt
+       ,''
+       ,' '
+       ,${EDWDB}.opera_folio_dtl.d_timestamp
+	   ,${EDWDB}.opera_folio_dtl.i_source_id);
+
+.IF ERRORCODE <> 0 THEN QUIT 8;
+  
+.QUIT;
+
+
+EOD
+
+rc=$?
+if [[ ${rc} -ne 0 ]]; then
+  print "*** Load of folio_dtl_all failed (${rc})" >&2
+  exit 8
+fi
+
+exit 0

@@ -1,0 +1,141 @@
+
+/********************************************************************************/
+/***** Insert MOB_DB Details                                                   *****/
+/********************************************************************************/
+
+INSERT INTO MOB_DB_STR.WERQ_jkl_mat
+(
+   JPC_NUMBER,
+   AUS_NO,
+   MFO_NUM,
+   WERQ_OWNR_NM,
+   OURD_NM,
+   OURD_NUM,
+   jkl_rptng_nm,
+   tre_addr_ln_1_text,
+   jkl_active_store_ind,
+   tre_lat_amt,
+   tre_lngtd_amt,
+   jkl_local_cust_ind,
+   sdf_ito_rec_add_dt
+)
+
+SELECT 
+   JPC_Number,
+   AUS_NO,
+   MFO_NUM,
+   WERQ_OWNR_NM,
+   OURD_NM,
+   OURD_NUM,
+   jkl_rptng_nm,
+   tre_addr_ln_1_text,
+   jkl_active_store_ind,
+   tre_lat_amt,
+   tre_lngtd_amt,
+   jkl_local_cust_ind
+FROM 
+(
+SELECT 
+   rb.jkl_msanum_jkl_idn_val    JPC_Number,
+   l.strnum_jkl_idn_val      AUS_NO,
+   pi.dnc_idn_val           MFO_NUM,
+   ogn.org_nm                WERQ_OWNR_NM,
+   ft.geoa_nm                OURD_NM,
+   ft.geoa_mn_val            OURD_NUM,
+   rb.jkl_rptng_nm,
+   rb.tre_addr_ln_1_text, 
+   rb.jkl_active_store_ind,
+   rb.tre_lat_amt,
+   rb.tre_lngtd_amt ,
+   rb.jkl_local_cust_ind
+FROM 
+   DAT_DB_STR.rltd_best_jkl_eff_mat rb
+inner join   LAM_DB.jkl_xr xr
+   on xr.jkl_id = rb.rltd_jkl_id
+   and current_date between rb.bl_eff_strt_mke and rb.bl_eff_end_mke
+inner join   DAT_DB.bottler_x_rltd_jkl_c bxrlc
+   on rb.rltd_jkl_id = frts.jkl_id
+inner join   LAM_DB.org_nm ogn
+   on ogn.org_dnc_id = frts.dnc_id
+   and ogn.obs_end_mke is null
+inner join   LAM_DB.frnc_terr ft
+   on ft.frnc_terr_id = frts.frnc_terr_id
+   and ft.obs_end_mke is null
+inner join   LAM_DB.dnc_idn pi
+   on pi.dnc_id =  frts.dnc_id
+   and pi.dnc_idn_clas_id = 2
+   and pi.obs_end_mke is null
+left join    DAT_DB_WORK.jkl_idn_mat l
+   on l.strnum_jkl_idn_val=xr.src_fld_val
+   and l.strnum_jkl_idn_val is not null
+GROUP BY 1,2,3,4,5,6,7,8,9,10,11,12 ) a 
+;
+
+
+.IF ERRORLEVEL <> 0 THEN .QUIT ERRORLEVEL;
+
+/********************************************************************************/
+/***** Clean up NULL values.                                                *****/
+/********************************************************************************/
+DELETE from MOB_DB_STR.WERQ_jkl_mat
+WHERE AUS_no is null or JPC_number is null;
+
+.IF ERRORLEVEL <> 0 THEN .QUIT ERRORLEVEL;
+
+
+/*******************************************************************/
+/* INSERT DATA INTO DAT_DB_CDA_STR TABLE                                      */
+/*******************************************************************/
+INSERT INTO DAT_DB_CDA_STR.TARGET_TBL} (
+        JPC_NUMBER,
+        AUS_no,
+        MFO_NUM,
+        WERQ_OWNR_NM,
+        OURD_NM,
+        OURD_NUM,
+        sdf_ito_rec_add_dt,
+        jkl_nm,
+        jkl_sts_id
+)
+
+SELECT COF.JPC_NUMBER, COF.AUS_NO, COF.MFO_NUM, COF.WERQ_OWNR_NM, COF.OURD_NM, COF.OURD_NUM, COF.sdf_ito_rec_add_dt, lnm.jkl_nm, LOX.jkl_STS_ID
+  FROM MOB_DB_STR.WERQ_jkl_mat                                COF,
+       LAM_DB.jkl_xr                                        LXR,
+        LAM_DB.jkl_bx                                       LBX,
+       LAM_DB.loc                                           loc,
+       LAM_DB.jkl_nm                                        lnm,
+         (SEL LXS.jkl_STS_ID, LLC.jkl_CLAS_ID, IDN.jkl_ID, IDN.jkl_idN_VAL, IDN.jkl_IDN_VAL_DESC,
+              IDN.jkl_IDN_CLAS_ID, IDNC.jkl_idn_clas_mn_val, IDNC.jkl_idn_clas_desc,
+              MAX(LXS.jkl_X_jkl_STS_STRT_mke) "STRT_mke"
+         FROM LAM_DB.jkl_IDN                              IDN             
+         INNER JOIN LAM_DB.jkl_IDN_CLAS                   IDNC
+            ON IDNC.jkl_idn_clas_id = IDN.jkl_idn_clas_id
+           AND IDNC.obs_end_mke IS NULL
+         LEFT OUTER JOIN LAM_DB.jkl_X_jkl_CLAS            LLC
+            ON LLC.jkl_ID = IDN.jkl_ID
+           AND LLC.jkl_CLAS_ID IN (5,3,12,10)                   --Only Independent Stores
+           AND LLC.obs_end_mke IS NULL
+         INNER JOIN LAM_DB.jkl_X_jkl_STS                    LXS
+            ON LXS.jkl_ID = IDN.jkl_ID
+           AND LXS.OBS_END_mke IS NULL
+        WHERE IDN.jkl_IDN_CLAS_ID IN (17,23)                    --Store Number
+          AND IDN.obs_end_mke IS NULL
+     GROUP BY LXS.jkl_STS_ID, LLC.jkl_CLAS_ID, IDN.jkl_ID,
+              IDN.jkl_idN_VAL,
+              IDN.jkl_IDN_VAL_DESC, IDN.jkl_IDN_CLAS_ID,
+              IDNC.jkl_idn_clas_mn_val, IDNC.jkl_idn_clas_desc) LOX
+WHERE LOX.jkl_idn_val = COF.AUS_NO
+   AND cof.JPC_number = lxr.src_fld_val
+   AND lbx.best_jkl_id = lxr.jkl_id
+   AND lox.jkl_id = loc.jkl_id
+   AND loc.jkl_id = lnm.jkl_id
+   AND lnm.obs_end_mke IS NULL
+   AND lbx.obs_end_mke IS NULL
+   AND lbx.rltd_jkl_id = LOX.jkl_ID
+   AND loc.info_src_id IN (11,2)
+   AND loc.obs_end_mke IS NULL
+   AND lnm.jkl_nm NOT LIKE 'STARBTLR%';
+
+.IF ERRORLEVEL <> 0 THEN .GOTO FAILURE;
+
+.IF ACTIVITYCOUNT = 0 THEN .GOTO NOROWS;

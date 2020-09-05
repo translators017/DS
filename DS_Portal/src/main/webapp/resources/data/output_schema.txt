@@ -1,0 +1,72 @@
+db.createCollection("Claims", {
+   "validator": {
+   "$jsonSchema": {
+{
+  "claim_number" : "number",
+  "claim_entry_date" : {
+    "$date" : "date"
+  },
+  "claim_type_cd" : "string",
+  "claim_media_cd" : "string",
+  "claim_status_cd" : "string",
+  "inpat_admition_date" : {
+    "$date" : "date"
+  },
+  "inpat_dischgarge_date" : {
+    "$date" : "2014-01-01T05:00:00Z"
+  },
+  "personal_details" : "Array"{
+    "name" : "string",
+    "age" : "double",
+    "gender" : "string",
+    "dob" : {
+      "$date" : "date"
+    },
+    "occupation" : "string",
+    "email" : "string"
+  },
+  "dischgarge_stat_reference" : "string",
+  "hospitaldetails" : {
+    "name" : "string",
+    "reg_number" : "string",
+    "tax_number" : "string",
+    "email" : "string",
+  },
+  "tot_chrg_amt" : "double",
+  "third_pty_pymt_amt" : "double,
+  "clm_receipt_date" : "date",
+  "member_id" : "string",
+  "cause" : "string",
+  "discharge_summary" : "string",
+  "claimLine" : "Array"[
+    {
+      "l_src_claim_nbr" : "double",
+      "src_clm_ln_id" : "double",
+      "serv_eff_date" : {
+        "$date" : "date"
+      },
+      "serv_end_date" : {
+        "$date" : "date"
+      },
+      "type" : "string   ",
+      "description" : "string",
+      "chrg_amt" : "double",
+      "quantity" : "double,
+      "evidence" : "string",
+      "tot_pymt_amt" : "double",
+      "ben_allow_amt" : "double",
+      "prov_allow_amt" : "double",
+      "mbr_coins_amt" : "double",
+      "mbr_copay_amt" : "double",
+      "deduct_amt" : "double",
+      "contr_disc_amt" : "double",
+      "fin_paid_amt" : "double"
+    }
+  ],
+  "action_timestamp" : {
+    "$date" : "date"
+  }
+}
+}
+}
+}

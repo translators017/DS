@@ -1,0 +1,529 @@
+#!/usr/bin/ksh
+####################################################################################################
+# Script Name  : EDW.LMS_Folio_Dtl_final.btq
+# Purpose      : This script inserts data in EDW tables with Bteq utility.
+#
+# Written      : 09/03/2014
+# Author       : Pradeep Sahu 
+# Modifications: 
+#  
+# 03/11/2018 NIIT(LN)  HST project: Added the logic to identify the source system. 
+#                      e.g. source id : 10 for LMS  and 23 for HMS - added "SOURCE_ID=${allItems}"
+#
+#                
+####################################################################################################
+
+. ${CONFIGDIR}/parseArg
+
+#############################################################################################
+# CHECK FOR VALID ARGUMENTS
+#############################################################################################
+
+REQUIRE_LOGON
+REQUIRE_SESSIONS
+
+#############################################################################################
+# SET LOCAL VARIABLES
+#############################################################################################
+SOURCE_ID=${allItems}
+
+bteq <<EOD
+
+.RUN FILE ${LOGONDIR}/${LOGON};
+.SET WIDTH 150;
+.SESSIONS 20;
+
+/********************************************************************************************
+Create a volatile table from workdb.lms_folio_dtl table
+*********************************************************************************************/
+
+CREATE MULTISET VOLATILE TABLE v_lms_folio_dtl
+AS ( SELECT  f_ticket_id
+            ,f_folio_id
+            ,c_prop_cd
+            ,d_create_ts
+            ,ROW_NUMBER() OVER (PARTITION BY f_ticket_id,f_folio_id,c_prop_cd ORDER BY f_ticket_amt) i_seq_nbr
+            ,d_trans_dt
+            ,c_rev_center_cd
+            ,c_bill_cd
+            ,c_bill_cd_desc
+            ,c_compor_first_name
+            ,c_compor_last_name
+            ,c_compor_dept
+            ,c_compor_gl_cd
+            ,c_cashier_id
+            ,c_cashier_first_name
+            ,c_cashier_last_name
+            ,i_cashier_emp_id
+            ,c_cashier_user_profile
+            ,i_covers
+            ,c_comments
+            ,c_external_ticket_nbr
+            ,c_meal_period_cd
+            ,c_meal_period_desc
+            ,c_ticket_type_cd
+            ,c_server_nbr
+            ,c_split_ticket_flag
+            ,c_settle_method_cd
+            ,c_settle_method_type
+            ,c_settle_method_short_desc
+            ,c_cc_lead_digit_type
+            ,c_account
+            ,f_tax_amt
+            ,f_tip_amt
+            ,f_ticket_amt
+            ,f_rev_amt01
+            ,f_rev_amt02
+            ,f_rev_amt03
+            ,f_rev_amt04
+            ,f_rev_amt05
+            ,f_rev_amt06
+            ,f_rev_amt07
+            ,f_rev_amt08
+            ,f_rev_amt09
+            ,f_rev_amt10
+            ,f_rev_amt11
+            ,f_rev_amt12
+            ,f_rev_amt13
+            ,f_rev_amt14
+            ,f_rev_amt15
+            ,f_rev_amt16
+            ,f_rev_amt17
+            ,f_rev_amt18
+            ,c_rev_type_cd01
+            ,c_rev_type_cd02
+            ,c_rev_type_cd03
+            ,c_rev_type_cd04
+            ,c_rev_type_cd05
+            ,c_rev_type_cd06
+            ,c_rev_type_cd07
+            ,c_rev_type_cd08
+            ,c_rev_type_cd09
+            ,c_rev_type_cd10
+            ,c_rev_type_cd11
+            ,c_rev_type_cd12
+            ,c_rev_type_cd13
+            ,c_rev_type_cd14
+            ,c_rev_type_cd15
+            ,c_rev_type_cd16
+            ,c_rev_type_cd17
+            ,c_rev_type_cd18
+            ,i_lms_rev_catg_id01
+            ,i_lms_rev_catg_id02
+            ,i_lms_rev_catg_id03
+            ,i_lms_rev_catg_id04
+            ,i_lms_rev_catg_id05
+            ,i_lms_rev_catg_id06
+            ,i_lms_rev_catg_id07
+            ,i_lms_rev_catg_id08
+            ,i_lms_rev_catg_id09
+            ,i_lms_rev_catg_id10
+            ,i_lms_rev_catg_id11
+            ,i_lms_rev_catg_id12
+            ,i_lms_rev_catg_id13
+            ,i_lms_rev_catg_id14
+            ,i_lms_rev_catg_id15
+            ,i_lms_rev_catg_id16
+            ,i_lms_rev_catg_id17
+            ,i_lms_rev_catg_id18
+            ,c_rev_catg_desc01
+            ,c_rev_catg_desc02
+            ,c_rev_catg_desc03
+            ,c_rev_catg_desc04
+            ,c_rev_catg_desc05
+            ,c_rev_catg_desc06
+            ,c_rev_catg_desc07
+            ,c_rev_catg_desc08
+            ,c_rev_catg_desc09
+            ,c_rev_catg_desc10
+            ,c_rev_catg_desc11
+            ,c_rev_catg_desc12
+            ,c_rev_catg_desc13
+            ,c_rev_catg_desc14
+            ,c_rev_catg_desc15
+            ,c_rev_catg_desc16
+            ,c_rev_catg_desc17
+            ,c_rev_catg_desc18
+            ,i_invoice_number
+FROM ${WORKDB}.lms_folio_dtl
+    )
+WITH DATA
+PRIMARY INDEX ( f_folio_id ,c_prop_cd )
+ON COMMIT PRESERVE ROWS ;
+
+.IF ERRORCODE <> 0 THEN QUIT 8;
+
+/********************************************************************************************
+Below query will update those records in EDW table which are there in lms_folio_dtl.
+If the record is not there then that one is inserted. 
+*********************************************************************************************/
+
+merge into ${EDWDB}.lms_folio_dtl 
+using v_lms_folio_dtl
+on      ${EDWDB}.lms_folio_dtl.f_ticket_id  = v_lms_folio_dtl.f_ticket_id
+AND     ${EDWDB}.lms_folio_dtl.f_folio_id   = v_lms_folio_dtl.f_folio_id
+AND     ${EDWDB}.lms_folio_dtl.c_prop_cd    = v_lms_folio_dtl.c_prop_cd
+AND     ${EDWDB}.lms_folio_dtl.i_seq_nbr    = v_lms_folio_dtl.i_seq_nbr 
+when matched then update 
+set     c_rev_center_cd            = v_lms_folio_dtl.c_rev_center_cd
+       ,c_bill_cd                  = v_lms_folio_dtl.c_bill_cd
+       ,c_bill_cd_desc             = v_lms_folio_dtl.c_bill_cd_desc
+       ,c_compor_first_name        = v_lms_folio_dtl.c_compor_first_name
+       ,c_compor_last_name         = v_lms_folio_dtl.c_compor_last_name
+       ,c_compor_dept              = v_lms_folio_dtl.c_compor_dept
+       ,c_compor_gl_cd             = v_lms_folio_dtl.c_compor_gl_cd
+       ,c_cashier_id               = v_lms_folio_dtl.c_cashier_id
+       ,c_cashier_first_name       = v_lms_folio_dtl.c_cashier_first_name
+       ,c_cashier_last_name        = v_lms_folio_dtl.c_cashier_last_name
+       ,i_cashier_emp_id           = v_lms_folio_dtl.i_cashier_emp_id
+       ,c_cashier_user_profile     = v_lms_folio_dtl.c_cashier_user_profile
+       ,i_covers                   = v_lms_folio_dtl.i_covers
+       ,c_comments                 = v_lms_folio_dtl.c_comments
+       ,c_external_ticket_nbr      = v_lms_folio_dtl.c_external_ticket_nbr
+       ,d_create_ts                = v_lms_folio_dtl.d_create_ts
+       ,d_trans_dt                 = v_lms_folio_dtl.d_trans_dt
+       ,c_meal_period_cd           = v_lms_folio_dtl.c_meal_period_cd
+       ,c_meal_period_desc         = v_lms_folio_dtl.c_meal_period_desc
+       ,c_ticket_type_cd           = v_lms_folio_dtl.c_ticket_type_cd
+       ,c_server_nbr               = v_lms_folio_dtl.c_server_nbr
+       ,c_split_ticket_flag        = v_lms_folio_dtl.c_split_ticket_flag
+       ,c_settle_method_cd         = v_lms_folio_dtl.c_settle_method_cd
+       ,c_settle_method_type       = v_lms_folio_dtl.c_settle_method_type
+       ,c_settle_method_short_desc = v_lms_folio_dtl.c_settle_method_short_desc
+       ,c_cc_lead_digit_type       = v_lms_folio_dtl.c_cc_lead_digit_type
+       ,c_account                  = v_lms_folio_dtl.c_account
+       ,f_tax_amt                  = v_lms_folio_dtl.f_tax_amt
+       ,f_tip_amt                  = v_lms_folio_dtl.f_tip_amt
+       ,f_ticket_amt               = v_lms_folio_dtl.f_ticket_amt
+       ,c_quality_cd               = ' '
+       ,d_timestamp                = current_timestamp(0)
+	   ,i_source_id                = ${SOURCE_ID}
+when not matched then insert 
+values (v_lms_folio_dtl.f_ticket_id
+       ,v_lms_folio_dtl.f_folio_id
+       ,v_lms_folio_dtl.c_prop_cd
+       ,v_lms_folio_dtl.i_seq_nbr
+       ,v_lms_folio_dtl.d_create_ts
+       ,v_lms_folio_dtl.d_trans_dt
+       ,v_lms_folio_dtl.c_rev_center_cd
+       ,v_lms_folio_dtl.c_bill_cd
+       ,v_lms_folio_dtl.c_bill_cd_desc
+       ,v_lms_folio_dtl.c_compor_first_name
+       ,v_lms_folio_dtl.c_compor_last_name
+       ,v_lms_folio_dtl.c_compor_dept
+       ,v_lms_folio_dtl.c_compor_gl_cd
+       ,v_lms_folio_dtl.c_cashier_id
+       ,v_lms_folio_dtl.c_cashier_first_name
+       ,v_lms_folio_dtl.c_cashier_last_name
+       ,v_lms_folio_dtl.i_cashier_emp_id
+       ,v_lms_folio_dtl.c_cashier_user_profile
+       ,v_lms_folio_dtl.i_covers
+       ,v_lms_folio_dtl.c_comments
+       ,v_lms_folio_dtl.c_external_ticket_nbr
+       ,v_lms_folio_dtl.c_meal_period_cd
+       ,v_lms_folio_dtl.c_meal_period_desc
+       ,v_lms_folio_dtl.c_ticket_type_cd
+       ,v_lms_folio_dtl.c_server_nbr
+       ,v_lms_folio_dtl.c_split_ticket_flag
+       ,v_lms_folio_dtl.c_settle_method_cd
+       ,v_lms_folio_dtl.c_settle_method_type
+       ,v_lms_folio_dtl.c_settle_method_short_desc
+       ,v_lms_folio_dtl.c_cc_lead_digit_type
+       ,v_lms_folio_dtl.c_account
+       ,v_lms_folio_dtl.f_tax_amt
+       ,v_lms_folio_dtl.f_tip_amt
+       ,v_lms_folio_dtl.f_ticket_amt
+       ,v_lms_folio_dtl.i_invoice_number
+       ,' '
+       ,current_timestamp(0)
+	   ,${SOURCE_ID});
+
+.IF ERRORCODE <> 0 THEN QUIT 8;
+
+/********************************************************************************************
+Below query will update those records in EDW table lms_folio_dtl_l_key
+which are there in lms_folio_dtl.If the record is not there then that one is inserted. 
+**********************************************************************************************/
+merge into ${EDWDB}.lms_folio_dtl_l_key 
+using (SELECT   f_ticket_id
+               ,c_prop_cd
+               ,f_folio_id
+               ,i_seq_nbr
+      FROM  v_lms_folio_dtl ) 
+on          ${EDWDB}.lms_folio_dtl_l_key.f_ticket_id  = v_lms_folio_dtl.f_ticket_id
+      AND   ${EDWDB}.lms_folio_dtl_l_key.c_prop_cd    = v_lms_folio_dtl.c_prop_cd
+      AND   ${EDWDB}.lms_folio_dtl_l_key.f_folio_id   = v_lms_folio_dtl.f_folio_id
+      AND   ${EDWDB}.lms_folio_dtl_l_key.i_seq_nbr    = v_lms_folio_dtl.i_seq_nbr 
+when matched then update 
+set               d_timestamp = current_timestamp(0),i_source_id = ${SOURCE_ID}
+when not matched then insert 
+values        ( v_lms_folio_dtl.f_ticket_id
+               ,v_lms_folio_dtl.c_prop_cd
+               ,v_lms_folio_dtl.f_folio_id     
+               ,v_lms_folio_dtl.i_seq_nbr
+               ,current_timestamp(0)
+			   ,${SOURCE_ID});
+
+.IF ERRORCODE <> 0 THEN QUIT 8;
+
+/********************************************************************************************
+Below query creates a volatile table using another volatile table v_lms_folio_dtl.
+This table will have data for each c_rev_type_cd01 to c_rev_type_cd18.
+This table will be later used to update or insert any records in EDW table 
+which have changes in non-key fields and whose previous instances got closed/expired.
+**********************************************************************************************/
+
+CREATE MULTISET VOLATILE TABLE VX
+AS(
+SELECT       c_rev_catg_desc01   as c_rev_catg_desc
+            ,i_lms_rev_catg_id01 as i_lms_rev_catg_id 
+            ,f_rev_amt01         as f_rev_amt
+            ,d_create_ts
+            ,f_ticket_id
+            ,f_folio_id
+            ,c_prop_cd
+            ,c_rev_type_cd01     as  c_rev_type_cd 
+            ,i_seq_nbr
+      FROM  v_lms_folio_dtl  where c_rev_type_cd01 IS NOT NULL AND   f_rev_amt01 <> 0
+UNION ALL
+SELECT       c_rev_catg_desc02   as c_rev_catg_desc
+            ,i_lms_rev_catg_id02 as i_lms_rev_catg_id
+            ,f_rev_amt02         as f_rev_amt
+            ,d_create_ts
+            ,f_ticket_id
+            ,f_folio_id
+            ,c_prop_cd
+            ,c_rev_type_cd02     as  c_rev_type_cd 
+            ,i_seq_nbr
+      FROM  v_lms_folio_dtl  where c_rev_type_cd02 IS NOT NULL AND   f_rev_amt02 <> 0
+UNION ALL
+SELECT       c_rev_catg_desc03   as c_rev_catg_desc
+            ,i_lms_rev_catg_id03 as i_lms_rev_catg_id
+            ,f_rev_amt03         as f_rev_amt
+            ,d_create_ts
+            ,f_ticket_id
+            ,f_folio_id
+            ,c_prop_cd
+            ,c_rev_type_cd03     as  c_rev_type_cd 
+            ,i_seq_nbr
+      FROM  v_lms_folio_dtl  where c_rev_type_cd03 IS NOT NULL AND   f_rev_amt03 <> 0
+UNION ALL
+SELECT       c_rev_catg_desc04   as c_rev_catg_desc
+            ,i_lms_rev_catg_id04 as i_lms_rev_catg_id
+            ,f_rev_amt04         as f_rev_amt
+            ,d_create_ts
+            ,f_ticket_id
+            ,f_folio_id
+            ,c_prop_cd
+            ,c_rev_type_cd04     as  c_rev_type_cd 
+            ,i_seq_nbr
+      FROM  v_lms_folio_dtl  where c_rev_type_cd04 IS NOT NULL AND   f_rev_amt04 <> 0
+UNION ALL
+SELECT       c_rev_catg_desc05   as c_rev_catg_desc
+            ,i_lms_rev_catg_id05 as i_lms_rev_catg_id
+            ,f_rev_amt05         as f_rev_amt
+            ,d_create_ts
+            ,f_ticket_id
+            ,f_folio_id
+            ,c_prop_cd
+            ,c_rev_type_cd05     as  c_rev_type_cd 
+            ,i_seq_nbr
+      FROM  v_lms_folio_dtl  where c_rev_type_cd05 IS NOT NULL AND   f_rev_amt05 <> 0
+UNION ALL
+SELECT       c_rev_catg_desc06   as c_rev_catg_desc
+            ,i_lms_rev_catg_id06 as i_lms_rev_catg_id
+            ,f_rev_amt06         as f_rev_amt
+            ,d_create_ts
+            ,f_ticket_id
+            ,f_folio_id
+            ,c_prop_cd
+            ,c_rev_type_cd06     as  c_rev_type_cd 
+            ,i_seq_nbr
+      FROM  v_lms_folio_dtl  where c_rev_type_cd06 IS NOT NULL AND   f_rev_amt06 <> 0
+UNION ALL
+SELECT       c_rev_catg_desc07   as c_rev_catg_desc
+            ,i_lms_rev_catg_id07 as i_lms_rev_catg_id
+            ,f_rev_amt07         as f_rev_amt
+            ,d_create_ts
+            ,f_ticket_id
+            ,f_folio_id
+            ,c_prop_cd
+            ,c_rev_type_cd07     as  c_rev_type_cd 
+            ,i_seq_nbr
+      FROM  v_lms_folio_dtl  where c_rev_type_cd07 IS NOT NULL AND   f_rev_amt07 <> 0
+UNION ALL
+SELECT       c_rev_catg_desc08   as c_rev_catg_desc
+            ,i_lms_rev_catg_id08 as i_lms_rev_catg_id
+            ,f_rev_amt08         as f_rev_amt
+            ,d_create_ts
+            ,f_ticket_id
+            ,f_folio_id
+            ,c_prop_cd
+            ,c_rev_type_cd08     as  c_rev_type_cd 
+            ,i_seq_nbr
+      FROM  v_lms_folio_dtl  where c_rev_type_cd08 IS NOT NULL AND   f_rev_amt08 <> 0
+UNION ALL
+SELECT       c_rev_catg_desc09   as c_rev_catg_desc
+            ,i_lms_rev_catg_id09 as i_lms_rev_catg_id
+            ,f_rev_amt09         as f_rev_amt
+            ,d_create_ts
+            ,f_ticket_id
+            ,f_folio_id
+            ,c_prop_cd
+            ,c_rev_type_cd09     as  c_rev_type_cd 
+            ,i_seq_nbr
+      FROM  v_lms_folio_dtl  where c_rev_type_cd09 IS NOT NULL AND   f_rev_amt09 <> 0
+UNION ALL
+SELECT       c_rev_catg_desc10   as c_rev_catg_desc
+            ,i_lms_rev_catg_id10 as i_lms_rev_catg_id
+            ,f_rev_amt10         as f_rev_amt
+            ,d_create_ts
+            ,f_ticket_id
+            ,f_folio_id
+            ,c_prop_cd
+            ,c_rev_type_cd10     as  c_rev_type_cd 
+            ,i_seq_nbr
+      FROM  v_lms_folio_dtl  where c_rev_type_cd10 IS NOT NULL AND   f_rev_amt10 <> 0	
+UNION ALL
+SELECT       c_rev_catg_desc11   as c_rev_catg_desc
+            ,i_lms_rev_catg_id11 as i_lms_rev_catg_id
+            ,f_rev_amt11         as f_rev_amt
+            ,d_create_ts
+            ,f_ticket_id
+            ,f_folio_id
+            ,c_prop_cd
+            ,c_rev_type_cd11     as  c_rev_type_cd 
+            ,i_seq_nbr
+      FROM  v_lms_folio_dtl  where c_rev_type_cd11 IS NOT NULL AND   f_rev_amt11 <> 0
+UNION ALL
+SELECT       c_rev_catg_desc12   as c_rev_catg_desc
+            ,i_lms_rev_catg_id12 as i_lms_rev_catg_id
+            ,f_rev_amt12         as f_rev_amt
+            ,d_create_ts
+            ,f_ticket_id
+            ,f_folio_id
+            ,c_prop_cd
+            ,c_rev_type_cd12     as  c_rev_type_cd 
+            ,i_seq_nbr
+      FROM  v_lms_folio_dtl  where c_rev_type_cd12 IS NOT NULL AND   f_rev_amt12 <> 0
+UNION ALL
+SELECT       c_rev_catg_desc13   as c_rev_catg_desc
+            ,i_lms_rev_catg_id13 as i_lms_rev_catg_id
+            ,f_rev_amt13         as f_rev_amt
+            ,d_create_ts
+            ,f_ticket_id
+            ,f_folio_id
+            ,c_prop_cd
+            ,c_rev_type_cd13     as  c_rev_type_cd 
+            ,i_seq_nbr
+      FROM  v_lms_folio_dtl  where c_rev_type_cd13 IS NOT NULL AND   f_rev_amt13 <> 0
+UNION ALL
+SELECT       c_rev_catg_desc14   as c_rev_catg_desc
+            ,i_lms_rev_catg_id14 as i_lms_rev_catg_id
+            ,f_rev_amt14         as f_rev_amt
+            ,d_create_ts
+            ,f_ticket_id
+            ,f_folio_id
+            ,c_prop_cd
+            ,c_rev_type_cd14     as  c_rev_type_cd 
+            ,i_seq_nbr
+      FROM  v_lms_folio_dtl  where c_rev_type_cd14 IS NOT NULL AND   f_rev_amt14 <> 0
+UNION ALL
+SELECT       c_rev_catg_desc15   as c_rev_catg_desc
+            ,i_lms_rev_catg_id15 as i_lms_rev_catg_id
+            ,f_rev_amt15         as f_rev_amt
+            ,d_create_ts
+            ,f_ticket_id
+            ,f_folio_id
+            ,c_prop_cd
+            ,c_rev_type_cd15     as  c_rev_type_cd 
+            ,i_seq_nbr
+      FROM  v_lms_folio_dtl  where c_rev_type_cd15 IS NOT NULL AND   f_rev_amt15 <> 0
+UNION ALL
+SELECT       c_rev_catg_desc16   as c_rev_catg_desc
+            ,i_lms_rev_catg_id16 as i_lms_rev_catg_id
+            ,f_rev_amt16         as f_rev_amt
+            ,d_create_ts
+            ,f_ticket_id
+            ,f_folio_id
+            ,c_prop_cd
+            ,c_rev_type_cd16     as  c_rev_type_cd 
+            ,i_seq_nbr
+      FROM  v_lms_folio_dtl  where c_rev_type_cd16 IS NOT NULL AND   f_rev_amt16 <> 0
+UNION ALL
+SELECT       c_rev_catg_desc17   as c_rev_catg_desc
+            ,i_lms_rev_catg_id17 as i_lms_rev_catg_id
+            ,f_rev_amt17         as f_rev_amt
+            ,d_create_ts
+            ,f_ticket_id
+            ,f_folio_id
+            ,c_prop_cd
+            ,c_rev_type_cd17     as  c_rev_type_cd 
+            ,i_seq_nbr
+      FROM  v_lms_folio_dtl  where c_rev_type_cd17 IS NOT NULL AND   f_rev_amt17 <> 0
+UNION ALL
+SELECT       c_rev_catg_desc18   as c_rev_catg_desc
+            ,i_lms_rev_catg_id18 as i_lms_rev_catg_id
+            ,f_rev_amt18         as f_rev_amt
+            ,d_create_ts
+            ,f_ticket_id
+            ,f_folio_id
+            ,c_prop_cd
+            ,c_rev_type_cd18     as  c_rev_type_cd 
+            ,i_seq_nbr
+      FROM  v_lms_folio_dtl  where c_rev_type_cd18 IS NOT NULL AND   f_rev_amt18 <> 0
+)WITH DATA
+PRIMARY INDEX ( f_folio_id ,c_prop_cd )
+ON COMMIT PRESERVE ROWS ;  
+
+.IF ERRORCODE <> 0 THEN QUIT 8;
+
+/********************************************************************************************
+Below query will update those records in EDW table lms_folio_revenue_dtl
+which have changes in non-key fields and whose previous instances got closed/expired.
+It will also insert a row in the EDW table lms_folio_revenue_dtl if it does not exists in it
+but exist in volatile table VX created above for each c_rev_type_cd01 to c_rev_type_cd18.
+**********************************************************************************************/
+
+merge into ${EDWDB}.lms_folio_revenue_dtl 
+using VX 
+on       ${EDWDB}.lms_folio_revenue_dtl.f_ticket_id   = VX.f_ticket_id
+AND      ${EDWDB}.lms_folio_revenue_dtl.f_folio_id    = VX.f_folio_id
+AND      ${EDWDB}.lms_folio_revenue_dtl.c_prop_cd     = VX.c_prop_cd
+AND      ${EDWDB}.lms_folio_revenue_dtl.c_rev_type_cd = VX.c_rev_type_cd
+AND      ${EDWDB}.lms_folio_revenue_dtl.i_seq_nbr     = VX.i_seq_nbr
+when matched then update 
+set      c_rev_catg_desc    = VX.c_rev_catg_desc
+        ,i_lms_rev_catg_id  = VX.i_lms_rev_catg_id
+        ,f_rev_amt          = VX.f_rev_amt
+        ,d_create_ts        = VX.d_create_ts
+        ,c_quality_cd       = ' '
+        ,d_timestamp        = current_timestamp(0)
+		,i_source_id        = ${SOURCE_ID}
+when not matched then insert 
+values     ( VX.f_ticket_id
+            ,VX.f_folio_id
+            ,VX.c_prop_cd
+            ,VX.i_seq_nbr
+            ,VX.c_rev_type_cd
+            ,VX.d_create_ts
+            ,VX.i_lms_rev_catg_id
+            ,VX.c_rev_catg_desc
+            ,VX.f_rev_amt
+            ,' '
+            ,current_timestamp(0)
+			,${SOURCE_ID}); 
+
+.IF ERRORCODE <> 0 THEN QUIT 8;
+  
+.QUIT;
+
+EOD
+
+rc=$?
+if [[ ${rc} -ne 0 ]]; then
+  print "*** Load of lms_folio_dtl failed (${rc})" >&2
+  exit 8
+fi
+
+exit 0

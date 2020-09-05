@@ -1,0 +1,107 @@
+#===============================================================================
+# Script Name:   bhk.gst_trip_dtl_combine_p4.new.btq
+# Example(S):
+# Purpose:       BTEQ script to insert updated trips into key table
+# Written:       7/6/2012
+# Author:        LBM
+# Modifications: LBM 7/27/2012 removed comparisons on i_trip_nbr, brand_trip_nbr
+#                and avg... fields to remove null comparison
+#                06/16/2014 Pat A. Add a condition where not exists in the
+#                                  key table to prevent duplicated data.
+#===============================================================================
+. $CONFIGDIR/parseArg
+
+# Check for valid arguments
+REQUIRE_LOGON
+
+bteq <<EOF
+.RUN FILE $LOGONDIR/$LOGON;
+
+/*********************************************************
+   INSERT INTO KEY TABLE ALL UPDATED EXISTING
+   RECORDS
+**********************************************************/
+locking ${PDBKEYDB}.gst_trip_dtl_key for access
+insert into ${PDBKEYDB}.gst_trip_dtl_key (
+ i_dmid
+,c_prop_cd
+,i_trip_id
+,change_code
+,key_sequence
+,time_stamp
+,d_timestamp
+)
+select i_dmid
+,c_prop_cd
+,i_trip_id
+,'U'
+,999999999
+,current_timestamp(5)
+,current_timestamp(0)
+from ${WORKDB}.gst_trip_dtl_stage a
+where exists (
+                 select *
+                 from (
+                          select * from ${EDWDB}.gst_trip_dtl
+                          union all
+                          select * from ${ARCHIVEDB}.gst_trip_dtl
+                      ) b
+                 where a.i_dmid     = b.i_dmid
+                 and   a.c_prop_cd  = b.c_prop_cd
+                 and   a.d_start_dt = b.d_start_dt
+                 and   a.d_end_dt   = b.d_end_dt
+                 and   a.i_trip_id  = b.i_trip_id
+                 and  (   a.d_rpt_period        <> b.d_rpt_period                  
+                       or a.i_nbr_days          <> b.i_nbr_days                    
+                       or a.i_rated_days        <> b.i_rated_days                  
+                       or a.f_actual_all        <> b.f_actual_all                  
+                       or a.f_actual_game       <> b.f_actual_game                 
+                       or a.f_actual_slot       <> b.f_actual_slot                 
+                       or a.f_actual_oth        <> b.f_actual_oth                  
+                       or a.f_theo_all          <> b.f_theo_all                    
+                       or a.f_theo_game         <> b.f_theo_game                   
+                       or a.f_theo_slot         <> b.f_theo_slot                   
+                       or a.f_theo_oth          <> b.f_theo_oth                    
+                       or a.c_group_cd          <> b.c_group_cd                    
+                       or a.f_comp_worth        <> b.f_comp_worth                  
+                       or a.c_week_cd           <> b.c_week_cd  
+                       or a.f_cash_play_game    <> b.f_cash_play_game              
+                       or a.f_cash_play_slot    <> b.f_cash_play_slot              
+                       or a.f_cash_play_oth     <> b.f_cash_play_oth               
+                       or a.f_marker_play_game  <> b.f_marker_play_game            
+                       or a.f_marker_play_slot  <> b.f_marker_play_slot            
+                       or a.f_marker_play_oth   <> b.f_marker_play_oth             
+                       or a.f_denom_most_play   <> b.f_denom_most_play             
+                       or a.f_avgbet_game       <> b.f_avgbet_game                 
+                       or a.f_avgbet_slot       <> b.f_avgbet_slot                 
+                       or a.f_avgbet_oth        <> b.f_avgbet_oth                  
+                       or a.i_avgbet_div_game   <> b.i_avgbet_div_game             
+                       or a.i_avgbet_div_slot   <> b.i_avgbet_div_slot             
+                       or a.i_avgbet_div_oth    <> b.i_avgbet_div_oth              
+                       or a.i_len_of_play_game  <> b.i_len_of_play_game            
+                       or a.i_len_of_play_slot  <> b.i_len_of_play_slot            
+                       or a.i_len_of_play_oth   <> b.i_len_of_play_oth             
+                       or a.f_room_comp_amt     <> b.f_room_comp_amt               
+                       or a.f_food_comp_amt     <> b.f_food_comp_amt               
+                       or a.f_other_comp_amt    <> b.f_other_comp_amt              
+                       or a.f_total_comp_amt    <> b.f_total_comp_amt              
+                       or a.c_purge_flag        <> b.c_purge_flag                  
+                       or a.d_purge_date        <> b.d_purge_date   
+                       )  
+            )
+and not exists
+      (
+        select *
+        from ${PDBKEYDB}.gst_trip_dtl_key k
+        where a.i_dmid      = k.i_dmid
+        and   a.i_trip_id   = k.i_trip_id
+      )             
+;
+
+.IF ERRORCODE <> 0 THEN .QUIT ERRORCODE;
+.QUIT; 
+
+EOF
+
+rc=$?
+exit ${rc}

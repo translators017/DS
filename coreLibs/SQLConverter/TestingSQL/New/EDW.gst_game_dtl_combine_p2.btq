@@ -1,0 +1,54 @@
+#*********************************************************************
+# Script Name:	gst_game_dtl_combine.btq
+# Example(S):	
+# Purpose:	BTEQ script to insert victim records that should be deleted
+#		into key table for summary processing
+# Written:	03/12/2012
+# Author:	LBM
+# Modifications: 
+# ********************************************************************
+. $CONFIGDIR/parseArg
+
+# Check for valid arguments
+REQUIRE_LOGON
+
+bteq <<EOF
+.RUN FILE $LOGONDIR/$LOGON;
+.SET ERRORLEVEL 3807 SEVERITY 0;
+
+/*********************************************************
+	INSERT DELETES INTO KEY TABLE DUE TO COMBINES 
+	FOR PURGED RECORDS
+**********************************************************/
+locking ${PDBKEYDB}.gst_game_dtl_key for access
+insert into ${PDBKEYDB}.gst_game_dtl_key (
+ i_dmid
+,c_prop_cd
+,d_date
+,c_game_cd
+,f_slot_denom
+,change_code
+,key_sequence
+,time_stamp
+,d_timestamp
+)
+sel i_xref_dmid
+,c_prop_cd
+,d_date
+,c_game_cd
+,f_slot_denom
+,'D'
+,777777777
+,current_timestamp(5)
+,current_timestamp(0)
+from ${WORKDB}.ggd_purged_victim_survivors a
+;
+
+
+.IF ERRORCODE <> 0 THEN .QUIT ERRORCODE;
+.QUIT; 
+
+EOF
+
+rc=$?
+exit ${rc}

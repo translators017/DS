@@ -1,0 +1,81 @@
+#*********************************************************************
+# Script Name:	gst_game_dtl_combine.btq
+# Example(S):	
+# Purpose:	BTEQ script to insert newly combined records into base
+#		table
+# Written:	03/12/2012
+# Author:	LBM
+# Modifications: LBM 5/30/2012 updated code to take true average of 
+#			f_avg_bet and i_avgbet_div columns
+# ********************************************************************
+. $CONFIGDIR/parseArg
+
+# Check for valid arguments
+REQUIRE_LOGON
+
+bteq <<EOF
+.RUN FILE $LOGONDIR/$LOGON;
+.SET ERRORLEVEL 3807 SEVERITY 0;
+
+
+/*********************************************************
+	UPDATE (RE-AGGREGATE) RECORDS IN BASE
+	**THIS STEP IS CONSIDERED STANDARD 'UPDATE'**
+**********************************************************/
+--insert records with conflicting purge flags
+--default is to set purge flag = N and purge date = 12/31/9999
+--if conflicting declarations exist
+
+locking ${EDWDB}.gst_game_dtl for access
+insert into ${EDWDB}.gst_game_dtl (
+ i_dmid                        
+,c_prop_cd                     
+,c_game_type                   
+,c_game_cd                     
+,f_slot_denom                  
+,d_date                        
+,d_rpt_period                  
+,f_actual_win                  
+,f_avg_bet                     
+,i_avgbet_div                  
+,f_cash_play                   
+,f_marker_play                 
+,i_len_of_play                 
+,f_theoretical             
+,c_purge_flag
+,d_purge_date  
+)
+select 
+ a.i_dmid                        
+,a.c_prop_cd                     
+,a.c_game_type                   
+,a.c_game_cd                     
+,a.f_slot_denom                  
+,a.d_date                        
+,a.d_rpt_period                  
+,sum(a.f_actual_win)                  
+,sum(a.f_avg_bet)/count(*)                     
+,sum(a.i_avgbet_div)/count(*)                  
+,sum(a.f_cash_play)                   
+,sum(a.f_marker_play)                 
+,sum(a.i_len_of_play)                 
+,sum(a.f_theoretical)            
+,min(a.c_purge_flag)
+,max(d_purge_date)
+  
+from ${WORKDB}.ggd_purged_victim_survivors a,
+   ${CNTLDB}.cntl_archive_dates c
+	 
+where c.c_table_name 	= 'gst_game_dtl'
+and   a.d_date         >= c.d_archive_dt
+
+group by 1,2,3,4,5,6,7;
+
+
+.IF ERRORCODE <> 0 THEN .QUIT ERRORCODE;
+.QUIT; 
+
+EOF
+
+rc=$?
+exit ${rc}

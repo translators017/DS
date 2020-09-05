@@ -1,0 +1,436 @@
+    #!/usr/bin/ksh
+## EDW LMS Folio Detail  | $Revision$
+## PVCS Control String
+## $Workfile$
+## $Date$
+## $Modtime$
+## $Log$
+##
+##
+##             Copyright (c) 2001, Harrahs Operating Company, Inc
+##                           All Rights Reserved
+##          Property of Harrahs Entertainment, Inc, Memphis Tennessee
+##
+##  Program:  LMS_Folio_Dtl.tp
+##  Author:  Corlette Baylock
+##  Date Created:  03/14/2007
+##  Description:    This script inserts with tpump utility.
+##  Calling Patern: LMS_FOLIO_DTL.tp -S<cms code> -P<prop code>
+##                     -f<file name> -l<logon file name>
+##  Note: Arguments are parsed by ${CONFIGDIR}/parseArg.
+##
+##                          Change History
+##
+##  Date   Initials                   Description Of Change
+## ------- --------   -------------------------------------------------------------
+## 07/24/14  DI              Added new column for Tokenization  
+##
+
+
+  
+
+# Parse command line arguments
+. ${CONFIGDIR}/parseArg
+
+# Check for required arguments
+REQUIRE_LOGON
+REQUIRE_SESSIONS
+REQUIRE_propCd
+REQUIRE_fileName
+
+# Set Local Variables
+INPUT_FILE=${fileName}
+typeset -u PROP_CD=${propCd}
+typeset -u HTACT_CD=${CMSCd}
+integer error_return=8
+
+
+# Start LMS_FOLIO_DTL TPUMP
+print "$(date) - Starting TPUMP"
+tpump <<EOD
+   .LOGTABLE ${WORKDB}.lms_folio_dtl_${HTACT_CD}_log;
+   .RUN FILE ${LOGONDIR}/${LOGON};
+   # diagnostic evlinterp on for session; 
+   DATABASE ${WORKDB};
+
+   delete from ${WORKDB}.lms_folio_dtl;
+
+   .NAME $(ksh ${LIBDIR}/tpumpName.ksh $$);
+   .BEGIN LOAD SESSIONS ${SESSIONS}
+      ERRORTABLE ${WORKDB}.lms_folio_dtl_${HTACT_CD}_et
+      PACK 10
+      CHECKPOINT 0
+      ROBUST ON
+      SERIALIZE ON;
+
+   .LAYOUT INPUTLAYOUT;
+   .FIELD    PROPCDX4                      * VARCHAR(50) KEY;
+   .FIELD    DOIDX4                            * VARCHAR(50);
+   .FIELD    FOIDX4                         * VARCHAR(50) KEY;
+   .FIELD    AMNTX4                             * VARCHAR(50);
+   .FIELD    BLCDX4                           * VARCHAR(50);
+   .FIELD    DESCX4                             * VARCHAR(50);
+   .FIELD    CMPLNAMX4                        * VARCHAR(50);
+   .FIELD    CMPFNAMX4                           * VARCHAR(50);
+   .FIELD    CMPDEPTX4                      * VARCHAR(50);
+   .FIELD    CMPGLNOX4                      * VARCHAR(50);
+   .FIELD    CHIDX4                         * VARCHAR(50);
+   .FIELD    CSRLNAMX4                       * VARCHAR(50);
+   .FIELD    CSRFNAMX4                        * VARCHAR(50);
+   .FIELD    CSREMPNX4                         * VARCHAR(50);
+   .FIELD    CSRPROFX4                      * VARCHAR(50);
+   .FIELD    COVRX4                         * VARCHAR(50);
+   .FIELD    CMNTX4                        * VARCHAR(50);
+   .FIELD    TKT#X4                        * VARCHAR(50);
+   .FIELD    MPCDX4                         * VARCHAR(50);
+   .FIELD    MPDSX4                        * VARCHAR(50);
+   .FIELD    TTYPX4                            * VARCHAR(50);
+   .FIELD    RVCTX4                         * VARCHAR(50);
+   .FIELD    RVSDX4                            * VARCHAR(50);
+   .FIELD    SERVX4                          * VARCHAR(50);
+   .FIELD    SPTKX4                             * VARCHAR(50);
+   .FIELD    TAXX4                         * VARCHAR(50);
+   .FIELD    TIP$X4                          * VARCHAR(50);
+   .FIELD    SETMX4                        * VARCHAR(50);
+   .FIELD    SETSX4                        * VARCHAR(50);
+   .FIELD    SETTYPX4                         * VARCHAR(50);
+   .FIELD    CCTYPEX4                       * VARCHAR(50);
+   .FIELD    CCNO04X4                        * VARCHAR(50);
+   .FIELD    CCEDX4                         * VARCHAR(50);
+   .FIELD    CCAUX4                         * VARCHAR(50);
+   .FIELD    ACCTX4                         * VARCHAR(50);
+   .FIELD    TRANDTX4                        * VARCHAR(50);
+   .FIELD    DATECRX4                        * VARCHAR(50);
+   .FIELD    TIMECRX4                      * VARCHAR(50);
+
+   .FIELD    RVAMT01X4                         * VARCHAR(50);
+   .FIELD    RVAMT02X4                         * VARCHAR(50);
+   .FIELD    RVAMT03X4                            * VARCHAR(50);
+   .FIELD    RVAMT04X4                         * VARCHAR(50);
+   .FIELD    RVAMT05X4                            * VARCHAR(50);
+   .FIELD    RVAMT06X4                        * VARCHAR(50);
+   .FIELD    RVAMT07X4                           * VARCHAR(50);
+   .FIELD    RVAMT08X4                      * VARCHAR(50);
+   .FIELD    RVAMT09X4                       * VARCHAR(50);
+   .FIELD    RVAMT10X4                         * VARCHAR(50);
+   .FIELD    RVAMT11X4                       * VARCHAR(50);
+   .FIELD    RVAMT12X4                        * VARCHAR(50);
+   .FIELD    RVAMT13X4                         * VARCHAR(50);
+   .FIELD    RVAMT14X4                      * VARCHAR(50);
+   .FIELD    RVAMT15X4                        * VARCHAR(50);
+   .FIELD    RVAMT16X4                       * VARCHAR(50);
+   .FIELD    RVAMT17X4                        * VARCHAR(50);
+   .FIELD    RVAMT18X4                         * VARCHAR(50);
+
+   .FIELD    RVTYP01X4                       * VARCHAR(50);
+   .FIELD    RVTYP02X4                         * VARCHAR(50);
+   .FIELD    RVTYP03X4                         * VARCHAR(50);
+   .FIELD    RVTYP04X4                            * VARCHAR(50);
+   .FIELD    RVTYP05X4                          * VARCHAR(50);
+   .FIELD    RVTYP06X4                          * VARCHAR(50);
+   .FIELD    RVTYP07X4                         * VARCHAR(50);
+   .FIELD    RVTYP08X4                          * VARCHAR(50);
+   .FIELD    RVTYP09X4                     * VARCHAR(50);
+   .FIELD    RVTYP10X4                       * VARCHAR(50);
+   .FIELD    RVTYP11X4                        * VARCHAR(50);
+   .FIELD    RVTYP12X4                       * VARCHAR(50);
+   .FIELD    RVTYP13X4                        * VARCHAR(50);
+   .FIELD    RVTYP14X4                         * VARCHAR(50);
+   .FIELD    RVTYP15X4                        * VARCHAR(50);
+   .FIELD    RVTYP16X4                       * VARCHAR(50);
+   .FIELD    RVTYP17X4                        * VARCHAR(50);
+   .FIELD    RVTYP18X4                        * VARCHAR(50);
+   
+   .FIELD    RVCAT01X4                         * VARCHAR(50);
+   .FIELD       RVCAT02X4                         * VARCHAR(50);
+   .FIELD    RVCAT03X4                            * VARCHAR(50);
+   .FIELD    RVCAT04X4                         * VARCHAR(50);
+   .FIELD    RVCAT05X4                            * VARCHAR(50);
+   .FIELD    RVCAT06X4                        * VARCHAR(50);
+   .FIELD    RVCAT07X4                           * VARCHAR(50);
+   .FIELD    RVCAT08X4                      * VARCHAR(50);
+   .FIELD    RVCAT09X4                       * VARCHAR(50);
+   .FIELD    RVCAT10X4                         * VARCHAR(50);
+   .FIELD    RVCAT11X4                       * VARCHAR(50);
+   .FIELD    RVCAT12X4                        * VARCHAR(50);
+   .FIELD    RVCAT13X4                         * VARCHAR(50);
+   .FIELD    RVCAT14X4                      * VARCHAR(50);
+   .FIELD    RVCAT15X4                        * VARCHAR(50);
+   .FIELD    RVCAT16X4                       * VARCHAR(50);
+   .FIELD    RVCAT17X4                        * VARCHAR(50);
+   .FIELD    RVCAT18X4                        * VARCHAR(50);
+
+   .FIELD    RVCDS01X4                       * VARCHAR(50);
+   .FIELD    RVCDS02X4                         * VARCHAR(50);
+   .FIELD    RVCDS03X4                         * VARCHAR(50);
+   .FIELD    RVCDS04X4                            * VARCHAR(50);
+   .FIELD    RVCDS05X4                          * VARCHAR(50);
+   .FIELD    RVCDS06X4                          * VARCHAR(50);
+   .FIELD    RVCDS07X4                         * VARCHAR(50);
+   .FIELD    RVCDS08X4                          * VARCHAR(50);
+   .FIELD    RVCDS09X4                     * VARCHAR(50);
+   .FIELD    RVCDS10X4                       * VARCHAR(50);
+   .FIELD    RVCDS11X4                        * VARCHAR(50);
+   .FIELD    RVCDS12X4                       * VARCHAR(50);
+   .FIELD    RVCDS13X4                        * VARCHAR(50);
+   .FIELD    RVCDS14X4                         * VARCHAR(50);
+   .FIELD    RVCDS15X4                        * VARCHAR(50);
+   .FIELD    RVCDS16X4                       * VARCHAR(50);
+   .FIELD    RVCDS17X4                        * VARCHAR(50);
+   .FIELD    RVCDS18X4                        * VARCHAR(50);
+   .FIELD    INVOICEX4                        * VARCHAR(50);
+    
+.DML LABEL INSERT_lms_folio_dtl;
+
+
+
+INSERT INTO ${WORKDB}.lms_folio_dtl
+( f_ticket_id            
+, f_folio_id          
+, c_prop_cd           
+, c_rev_center_cd            
+, c_bill_cd                  
+, c_bill_cd_desc             
+, c_compor_first_name         
+, c_compor_last_name        
+, c_compor_dept              
+, c_compor_gl_cd              
+, c_cashier_id                
+, c_cashier_first_name        
+, c_cashier_last_name         
+, i_cashier_emp_id            
+, c_cashier_user_profile      
+, i_covers                   
+, c_comments                  
+, c_external_ticket_nbr 
+, d_trans_dt  
+, d_create_ts
+, c_meal_period_cd           
+, c_meal_period_desc          
+, c_ticket_type_cd            
+, c_server_nbr               
+, c_split_ticket_flag         
+, c_settle_method_cd          
+, c_settle_method_type        
+, c_settle_method_short_desc  
+, c_cc_lead_digit_type      
+, c_account                   
+, f_tax_amt                  
+, f_tip_amt                   
+, f_ticket_amt 
+, c_rev_type_cd01
+, c_rev_catg_desc01
+, i_lms_rev_catg_id01
+, f_rev_amt01   
+, c_rev_type_cd02
+, c_rev_catg_desc02
+, i_lms_rev_catg_id02
+, f_rev_amt02         
+, c_rev_type_cd03
+, c_rev_catg_desc03
+, i_lms_rev_catg_id03
+, f_rev_amt03         
+, c_rev_type_cd04
+, c_rev_catg_desc04
+, i_lms_rev_catg_id04
+, f_rev_amt04         
+, c_rev_type_cd05
+, c_rev_catg_desc05
+, i_lms_rev_catg_id05
+, f_rev_amt05         
+, c_rev_type_cd06
+, c_rev_catg_desc06
+, i_lms_rev_catg_id06
+, f_rev_amt06         
+, c_rev_type_cd07
+, c_rev_catg_desc07
+, i_lms_rev_catg_id07
+, f_rev_amt07         
+, c_rev_type_cd08
+, c_rev_catg_desc08
+, i_lms_rev_catg_id08
+, f_rev_amt08         
+, c_rev_type_cd09
+, c_rev_catg_desc09
+, i_lms_rev_catg_id09
+, f_rev_amt09         
+, c_rev_type_cd10
+, c_rev_catg_desc10
+, i_lms_rev_catg_id10
+, f_rev_amt10          
+, c_rev_type_cd11
+, c_rev_catg_desc11
+, i_lms_rev_catg_id11
+, f_rev_amt11         
+, c_rev_type_cd12
+, c_rev_catg_desc12
+, i_lms_rev_catg_id12
+, f_rev_amt12         
+, c_rev_type_cd13
+, c_rev_catg_desc13
+, i_lms_rev_catg_id13
+, f_rev_amt13         
+, c_rev_type_cd14
+, c_rev_catg_desc14
+, i_lms_rev_catg_id14
+, f_rev_amt14         
+, c_rev_type_cd15
+, c_rev_catg_desc15
+, i_lms_rev_catg_id15
+, f_rev_amt15         
+, c_rev_type_cd16
+, c_rev_catg_desc16
+, i_lms_rev_catg_id16
+, f_rev_amt16         
+, c_rev_type_cd17
+, c_rev_catg_desc17
+, i_lms_rev_catg_id17
+, f_rev_amt17         
+, c_rev_type_cd18
+, c_rev_catg_desc18
+, i_lms_rev_catg_id18
+, f_rev_amt18
+, i_invoice_number              
+, c_quality_cd               
+, d_timestamp  
+)
+values
+( :DOIDX4  
+, :foidx4
+, :propcdx4
+, :rvctx4
+, :blcdx4
+, :descx4
+, :cmpfnamx4
+, :cmplnamx4
+, :cmpdeptx4
+, :cmpglnox4
+, :chidx4
+, :csrfnamx4
+, :csrlnamx4
+, :csrempnx4
+, :csrprofx4
+, :covrx4
+, :cmntx4
+, :TKT#X4
+, cast(cast(substr(:TRANDTX4,7,4) || '-' || substr(:TRANDTX4,1,2) || '-' || substr(:TRANDTX4,4,2) as char(10)) as date)
+, cast(cast(substr(:datecrx4,7,4) || '-' || substr(:datecrx4,1,2) || '-' || substr(:datecrx4,4,2) || ' ' || :timecrx4 as char(19)) as timestamp(0))
+, :mpcdx4
+, :mpdsx4
+, :ttypx4
+, :servx4
+, :sptkx4
+, :setmx4
+, :settypx4
+, :setsx4
+, :cctypex4
+, :acctx4
+, :taxx4
+, :tip$x4
+, :amntx4
+, :RVTYP01X4
+, :RVCDS01X4
+, :RVCAT01X4
+, :RVAMT01X4   
+, :RVTYP02X4
+, :RVCDS02X4
+, :RVCAT02X4
+, :RVAMT02X4         
+, :RVTYP03X4
+, :RVCDS03X4
+, :RVCAT03X4
+, :RVAMT03X4         
+, :RVTYP04X4
+, :RVCDS04X4
+, :RVCAT04X4
+, :RVAMT04X4         
+, :RVTYP05X4
+, :RVCDS05X4
+, :RVCAT05X4
+, :RVAMT05X4         
+, :RVTYP06X4
+, :RVCDS06X4
+, :RVCAT06X4
+, :RVAMT06X4         
+, :RVTYP07X4
+, :RVCDS07X4
+, :RVCAT07X4
+, :RVAMT07X4         
+, :RVTYP08X4
+, :RVCDS08X4
+, :RVCAT08X4
+, :RVAMT08X4         
+, :RVTYP09X4
+, :RVCDS09X4
+, :RVCAT09X4
+, :RVAMT09X4         
+, :RVTYP10X4
+, :RVCDS10X4
+, :RVCAT10X4
+, :RVAMT10X4         
+, :RVTYP11X4
+, :RVCDS11X4
+, :RVCAT11X4
+, :RVAMT11X4         
+, :RVTYP12X4
+, :RVCDS12X4
+, :RVCAT12X4
+, :RVAMT12X4        
+, :RVTYP13X4
+, :RVCDS13X4
+, :RVCAT13X4
+, :RVAMT13X4         
+, :RVTYP14X4
+, :RVCDS14X4
+, :RVCAT14X4
+, :RVAMT14X4         
+, :RVTYP15X4
+, :RVCDS15X4
+, :RVCAT15X4
+, :RVAMT15X4         
+, :RVTYP16X4
+, :RVCDS16X4
+, :RVCAT16X4
+, :RVAMT16X4         
+, :RVTYP17X4
+, :RVCDS17X4
+, :RVCAT17X4
+, :RVAMT17X4         
+, :RVTYP18X4
+, :RVCDS18X4
+, :RVCAT18X4
+, :RVAMT18X4 
+, :INVOICEX4
+, ' '  
+, current_timestamp(0)     
+)
+;
+
+
+   .IMPORT INFILE ${INPUT_FILE}
+      FROM 1
+      FORMAT VARTEXT '|'
+      LAYOUT INPUTLAYOUT 
+      APPLY INSERT_lms_folio_dtl;
+
+   .END LOAD;
+   .LOGOFF;
+EOD
+integer status=$?
+
+# Error Checking
+if [[ 0 != $status ]]; then
+   print "$(date) - lms_folio_dtl.tp ERROR TPUMPing"
+   exit $error_return
+fi
+
+# Check to see if error table exist.
+ksh ${TDATDIR}/check_for_error_table.btq -l ${LOGON} ${WORKDB}.lms_folio_dtl_${HTACT_CD}_et
+status=$?
+if [[ 0 != ${status} ]]; then
+   print "$(date) - Error Table ${WORKDB}.ms_folio_dtl_dtl_${HTACT_CD}_et exists." 
+   exit ${error_return}
+fi
+
+print "$(date) - lms folio detail TPUMP Complete"
+return ${status}

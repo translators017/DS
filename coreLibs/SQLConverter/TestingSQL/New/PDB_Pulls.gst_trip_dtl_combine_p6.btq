@@ -1,0 +1,145 @@
+#*********************************************************************
+# Script Name:	gst_trip_dtl_combine.btq
+# Example(S):	
+# Purpose:	BTEQ script to insert records that have been updated
+#		by re-aggregationshould be deleted
+#		into key table for summary processing
+# Written:	06/21/2012
+# Author:	LBM
+# Modifications: --potential optimization to replace tables using the 
+#			key table and key sequence
+# ********************************************************************
+. $CONFIGDIR/parseArg
+
+# Check for valid arguments
+REQUIRE_LOGON
+
+bteq <<EOF
+.RUN FILE $LOGONDIR/$LOGON;
+.SET ERRORLEVEL 3807 SEVERITY 0;
+.SET RETRY OFF;
+
+/*********************************************************
+	DELETE RECORDS THAT HAVE BEEN UPDATED/RE-AGGREGATED
+	FROM BASE; INSERT NEW RECORDS
+**********************************************************/
+BT;
+
+del from ${EDWDB}.gst_trip_dtl all;
+
+insert into ${EDWDB}.gst_trip_dtl (
+        i_dmid
+        ,c_prop_cd
+        ,i_trip_id
+        ,d_rpt_period
+        ,d_start_dt
+        ,d_end_dt
+        ,i_nbr_days
+        ,i_rated_days
+        ,f_actual_all
+        ,f_actual_game 
+        ,f_actual_slot 
+        ,f_actual_oth 
+        ,f_theo_all 
+        ,f_theo_game 
+        ,f_theo_slot 
+        ,f_theo_oth 
+        ,c_group_cd 
+        ,f_comp_worth 
+        ,c_week_cd 
+        ,i_trip_nbr 
+        ,i_brand_trip_nbr 
+        ,avg_dly_act_all_days_all_trp 
+        ,avg_dly_theo_all_days_all_trp 
+        ,avg_dly_act_rt_days_all_trp 
+        ,avg_dly_theo_rt_days_all_trp 
+        ,f_cash_play_game 
+        ,f_cash_play_slot 
+        ,f_cash_play_oth 
+        ,f_marker_play_game 
+        ,f_marker_play_slot 
+        ,f_marker_play_oth 
+        ,f_denom_most_play 
+        ,f_avgbet_game 
+        ,f_avgbet_slot 
+        ,f_avgbet_oth 
+        ,i_avgbet_div_game 
+        ,i_avgbet_div_slot 
+        ,i_avgbet_div_oth 
+        ,i_len_of_play_game 
+        ,i_len_of_play_slot 
+        ,i_len_of_play_oth 
+        ,f_room_comp_amt 
+        ,f_food_comp_amt 
+        ,f_other_comp_amt 
+        ,f_total_comp_amt 
+      	,c_purge_flag 
+      	,d_purge_date
+      	,c_quality_cd
+      	,d_timestamp
+)
+sel i_dmid
+        ,c_prop_cd
+        ,i_trip_id
+        ,d_rpt_period
+        ,d_start_dt
+        ,d_end_dt
+        ,i_nbr_days
+        ,i_rated_days
+        ,f_actual_all
+        ,f_actual_game 
+        ,f_actual_slot 
+        ,f_actual_oth 
+        ,f_theo_all 
+        ,f_theo_game 
+        ,f_theo_slot 
+        ,f_theo_oth 
+        ,c_group_cd 
+        ,f_comp_worth 
+        ,c_week_cd 
+        ,i_trip_nbr 
+        ,i_brand_trip_nbr 
+        ,avg_dly_act_all_days_all_trp 
+        ,avg_dly_theo_all_days_all_trp 
+        ,avg_dly_act_rt_days_all_trp 
+        ,avg_dly_theo_rt_days_all_trp 
+        ,f_cash_play_game 
+        ,f_cash_play_slot 
+        ,f_cash_play_oth 
+        ,f_marker_play_game 
+        ,f_marker_play_slot 
+        ,f_marker_play_oth 
+        ,f_denom_most_play 
+        ,f_avgbet_game 
+        ,f_avgbet_slot 
+        ,f_avgbet_oth 
+        ,i_avgbet_div_game 
+        ,i_avgbet_div_slot 
+        ,i_avgbet_div_oth 
+        ,i_len_of_play_game 
+        ,i_len_of_play_slot 
+        ,i_len_of_play_oth 
+        ,f_room_comp_amt 
+        ,f_food_comp_amt 
+        ,f_other_comp_amt 
+        ,f_total_comp_amt 
+      	,c_purge_flag 
+      	,d_purge_date
+      	,''
+      	,current_timestamp(0)
+ from ${WORKDB}.gst_trip_dtl_stage a,
+ 	${CNTLDB}.cntl_archive_dates b
+ 
+ where b.c_table_name = 'gst_trip_dtl'
+ and   a.d_end_dt    >= b.d_archive_dt
+;
+
+ET;
+
+.IF ERRORCODE <> 0 THEN .QUIT ERRORCODE;
+.QUIT; 
+
+EOF
+
+rc=$?
+exit ${rc}

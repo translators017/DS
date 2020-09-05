@@ -1,0 +1,346 @@
+#!/usr/bin/ksh
+#############################################################################################
+# Script Name  : EDW.Hotel_activity_all_final.btq
+# Purpose      : This script inserts data in EDW tables with Bteq utility.
+#
+# Written      : 12/11/2018
+# Author       : Nishit Bandapati 
+# Modifications:                 
+#############################################################################################
+
+. ${CONFIGDIR}/parseArg
+
+#############################################################################################
+# CHECK FOR VALID ARGUMENTS
+#############################################################################################
+
+
+#############################################################################################
+# SET LOCAL VARIABLES
+#############################################################################################
+
+bteq <<EOD
+
+.RUN FILE ${LOGONDIR}/${LOGON};
+.SET WIDTH 150;
+.SESSIONS 20;
+
+/********************************************************************************************
+Below query will update those records in EDW hotel_activity_all table for all the properties except for dubai property
+If the record is not there then that one is inserted. 
+*********************************************************************************************/
+
+merge into ${EDWDB}.hotel_activity_all using ${EDWDB}.lms_hotel_activity
+on      ${EDWDB}.hotel_activity_all.f_reserve_id  = ${EDWDB}.lms_hotel_activity.f_reserve_id
+AND     ${EDWDB}.hotel_activity_all.c_prop_cd  = ${EDWDB}.lms_hotel_activity.c_prop_cd
+when matched then update 
+set    
+ c_activity_status                     =${EDWDB}.lms_hotel_activity.c_activity_status 
+,i_xref_dmid                           =${EDWDB}.lms_hotel_activity.i_xref_dmid                  
+,c_pri_cas_guest_id                    =${EDWDB}.lms_hotel_activity.c_pri_cas_guest_id
+,c_first_name                          =${EDWDB}.lms_hotel_activity.c_first_name
+,c_last_name                           =${EDWDB}.lms_hotel_activity.c_last_name
+,c_sec_cas_guest_id                    =${EDWDB}.lms_hotel_activity.c_sec_cas_guest_id
+,i_sec_xref_dmid                       =${EDWDB}.lms_hotel_activity.i_sec_xref_dmid
+,d_transaction_dt                      =${EDWDB}.lms_hotel_activity.d_transaction_dt
+,d_reserve_dt                          =${EDWDB}.lms_hotel_activity.d_reserve_dt
+,d_cancel_dt                           =${EDWDB}.lms_hotel_activity.d_cancel_dt
+,d_arrival_dt                          =${EDWDB}.lms_hotel_activity.d_arrival_dt
+,d_departure_dt                        =${EDWDB}.lms_hotel_activity.d_departure_dt
+,c_confirm_id                          =${EDWDB}.lms_hotel_activity.c_confirm_id
+,c_cancel_id                           =${EDWDB}.lms_hotel_activity.c_cancel_id
+,c_share_id                            =${EDWDB}.lms_hotel_activity.c_share_id
+,i_nbr_shares                          =${EDWDB}.lms_hotel_activity.i_nbr_shares
+,c_reservation_agent_id                =${EDWDB}.lms_hotel_activity.c_reservation_agent_id
+,c_cancel_agent_id                     =${EDWDB}.lms_hotel_activity.c_cancel_agent_id
+,c_checkin_agent_id                    =${EDWDB}.lms_hotel_activity.c_checkin_agent_id
+,c_checkout_agent_id                   =${EDWDB}.lms_hotel_activity.c_checkout_agent_id
+,c_transaction_agent_id                =${EDWDB}.lms_hotel_activity.c_transaction_agent_id
+,c_wing_cd                             =${EDWDB}.lms_hotel_activity.c_wing_cd
+,c_original_rm_type                    =${EDWDB}.lms_hotel_activity.c_original_rm_type
+,c_rm_nbr                              =${EDWDB}.lms_hotel_activity.c_rm_nbr
+,i_rm_night                            =${EDWDB}.lms_hotel_activity.i_rm_night
+,i_nbr_rooms                           =${EDWDB}.lms_hotel_activity.i_nbr_rooms
+,i_nbr_occupants                       =${EDWDB}.lms_hotel_activity.i_nbr_occupants
+,c_occupant_type                       =${EDWDB}.lms_hotel_activity.c_occupant_type
+,c_source_cd                           =${EDWDB}.lms_hotel_activity.c_source_cd
+,c_rate_plan                           =${EDWDB}.lms_hotel_activity.c_rate_plan
+,c_group_cd                            =${EDWDB}.lms_hotel_activity.c_group_cd
+,c_group_type                          =${EDWDB}.lms_hotel_activity.c_group_type
+,c_address_1                           =${EDWDB}.lms_hotel_activity.c_address_1
+,c_address_2                           =${EDWDB}.lms_hotel_activity.c_address_2
+,c_city                                =${EDWDB}.lms_hotel_activity.c_city
+,c_state_cd                            =${EDWDB}.lms_hotel_activity.c_state_cd
+,c_zip_cd                              =${EDWDB}.lms_hotel_activity.c_zip_cd
+,d_dob                                 =${EDWDB}.lms_hotel_activity.d_dob
+,c_confirm_email                       =${EDWDB}.lms_hotel_activity.c_confirm_email
+,c_email_contact_flag                  =${EDWDB}.lms_hotel_activity.c_email_contact_flag
+,c_offer_id                            =${EDWDB}.lms_hotel_activity.c_offer_id
+,i_customer_segment                    =${EDWDB}.lms_hotel_activity.i_customer_segment
+,c_tracking                            =${EDWDB}.lms_hotel_activity.c_tracking
+,c_settle_method                       =${EDWDB}.lms_hotel_activity.c_settle_method
+,c_credit_card_nbr                     =${EDWDB}.lms_hotel_activity.c_credit_card_nbr
+,c_credit_card_exp_dt                  =${EDWDB}.lms_hotel_activity.c_credit_card_exp_dt
+,c_credit_card_auth_nbr                =${EDWDB}.lms_hotel_activity.c_credit_card_auth_nbr
+,f_deposit_amt_req                     =${EDWDB}.lms_hotel_activity.f_deposit_amt_req
+,f_deposit_credit_card_chg             =${EDWDB}.lms_hotel_activity.f_deposit_credit_card_chg
+,f_room_rev_reserved                   =${EDWDB}.lms_hotel_activity.f_room_rev_reserved
+,f_room_tax_reserved                   =${EDWDB}.lms_hotel_activity.f_room_tax_reserved
+,d_checkin_dt                          =${EDWDB}.lms_hotel_activity.d_checkin_dt
+,d_checkin_time                        =${EDWDB}.lms_hotel_activity.d_checkin_time
+,c_checkin_location                    =${EDWDB}.lms_hotel_activity.c_checkin_location
+,d_checkout_dt                         =${EDWDB}.lms_hotel_activity.d_checkout_dt
+,d_checkout_time                       =${EDWDB}.lms_hotel_activity.d_checkout_time
+,c_checkout_location                   =${EDWDB}.lms_hotel_activity.c_checkout_location
+,f_room_rev                            =${EDWDB}.lms_hotel_activity.f_room_rev
+,f_fb_rev                              =${EDWDB}.lms_hotel_activity.f_fb_rev
+,f_other_rev                           =${EDWDB}.lms_hotel_activity.f_other_rev
+,f_comp_room_rev                       =${EDWDB}.lms_hotel_activity.f_comp_room_rev
+,f_comp_fb_rev                         =${EDWDB}.lms_hotel_activity.f_comp_fb_rev
+,f_comp_other_rev                      =${EDWDB}.lms_hotel_activity.f_comp_other_rev
+,c_quality_cd                          =''
+,d_timestamp                           =${EDWDB}.lms_hotel_activity.d_timestamp
+,c_rm_type                             =${EDWDB}.lms_hotel_activity.c_rm_type
+,c_original_wing_cd                    =${EDWDB}.lms_hotel_activity.c_original_wing_cd
+,i_source_id                           ='10'
+                                       
+when not matched then insert 
+values (
+		 ${EDWDB}.lms_hotel_activity.f_reserve_id
+		,${EDWDB}.lms_hotel_activity.c_prop_cd
+		,${EDWDB}.lms_hotel_activity.c_activity_status 
+        ,${EDWDB}.lms_hotel_activity.i_xref_dmid                  
+        ,${EDWDB}.lms_hotel_activity.c_pri_cas_guest_id
+        ,${EDWDB}.lms_hotel_activity.c_first_name
+        ,${EDWDB}.lms_hotel_activity.c_last_name
+        ,${EDWDB}.lms_hotel_activity.c_sec_cas_guest_id
+        ,${EDWDB}.lms_hotel_activity.i_sec_xref_dmid
+        ,${EDWDB}.lms_hotel_activity.d_transaction_dt
+        ,${EDWDB}.lms_hotel_activity.d_reserve_dt
+        ,${EDWDB}.lms_hotel_activity.d_cancel_dt
+        ,${EDWDB}.lms_hotel_activity.d_arrival_dt
+        ,${EDWDB}.lms_hotel_activity.d_departure_dt
+        ,${EDWDB}.lms_hotel_activity.c_confirm_id
+        ,${EDWDB}.lms_hotel_activity.c_cancel_id
+        ,${EDWDB}.lms_hotel_activity.c_share_id
+        ,${EDWDB}.lms_hotel_activity.i_nbr_shares
+        ,${EDWDB}.lms_hotel_activity.c_reservation_agent_id
+        ,${EDWDB}.lms_hotel_activity.c_cancel_agent_id
+        ,${EDWDB}.lms_hotel_activity.c_checkin_agent_id
+        ,${EDWDB}.lms_hotel_activity.c_checkout_agent_id
+        ,${EDWDB}.lms_hotel_activity.c_transaction_agent_id
+        ,${EDWDB}.lms_hotel_activity.c_wing_cd
+        ,${EDWDB}.lms_hotel_activity.c_original_rm_type
+        ,${EDWDB}.lms_hotel_activity.c_rm_nbr
+        ,${EDWDB}.lms_hotel_activity.i_rm_night
+        ,${EDWDB}.lms_hotel_activity.i_nbr_rooms
+        ,${EDWDB}.lms_hotel_activity.i_nbr_occupants
+        ,${EDWDB}.lms_hotel_activity.c_occupant_type
+        ,${EDWDB}.lms_hotel_activity.c_source_cd
+        ,${EDWDB}.lms_hotel_activity.c_rate_plan
+        ,${EDWDB}.lms_hotel_activity.c_group_cd
+        ,${EDWDB}.lms_hotel_activity.c_group_type
+        ,${EDWDB}.lms_hotel_activity.c_address_1
+        ,${EDWDB}.lms_hotel_activity.c_address_2
+        ,${EDWDB}.lms_hotel_activity.c_city
+        ,${EDWDB}.lms_hotel_activity.c_state_cd
+        ,${EDWDB}.lms_hotel_activity.c_zip_cd
+        ,${EDWDB}.lms_hotel_activity.d_dob
+        ,${EDWDB}.lms_hotel_activity.c_confirm_email
+        ,${EDWDB}.lms_hotel_activity.c_email_contact_flag
+        ,${EDWDB}.lms_hotel_activity.c_offer_id
+        ,${EDWDB}.lms_hotel_activity.i_customer_segment
+        ,${EDWDB}.lms_hotel_activity.c_tracking
+        ,${EDWDB}.lms_hotel_activity.c_settle_method
+        ,${EDWDB}.lms_hotel_activity.c_credit_card_nbr
+        ,${EDWDB}.lms_hotel_activity.c_credit_card_exp_dt
+        ,${EDWDB}.lms_hotel_activity.c_credit_card_auth_nbr
+        ,${EDWDB}.lms_hotel_activity.f_deposit_amt_req
+        ,${EDWDB}.lms_hotel_activity.f_deposit_credit_card_chg
+        ,${EDWDB}.lms_hotel_activity.f_room_rev_reserved
+        ,${EDWDB}.lms_hotel_activity.f_room_tax_reserved
+        ,${EDWDB}.lms_hotel_activity.d_checkin_dt
+        ,${EDWDB}.lms_hotel_activity.d_checkin_time
+        ,${EDWDB}.lms_hotel_activity.c_checkin_location
+        ,${EDWDB}.lms_hotel_activity.d_checkout_dt
+        ,${EDWDB}.lms_hotel_activity.d_checkout_time
+        ,${EDWDB}.lms_hotel_activity.c_checkout_location
+        ,${EDWDB}.lms_hotel_activity.f_room_rev
+        ,${EDWDB}.lms_hotel_activity.f_fb_rev
+        ,${EDWDB}.lms_hotel_activity.f_other_rev
+        ,${EDWDB}.lms_hotel_activity.f_comp_room_rev
+        ,${EDWDB}.lms_hotel_activity.f_comp_fb_rev
+        ,${EDWDB}.lms_hotel_activity.f_comp_other_rev
+        ,''
+        ,${EDWDB}.lms_hotel_activity.d_timestamp
+        ,${EDWDB}.lms_hotel_activity.c_rm_type
+        ,${EDWDB}.lms_hotel_activity.c_original_wing_cd
+        ,'10');
+
+.IF ERRORCODE <> 0 THEN QUIT 8;
+
+/********************************************************************************************
+Below query will update those records in EDW hotel_activity_all table for dubai property
+If the record is not there then that one is inserted. 
+*********************************************************************************************/
+
+merge into ${EDWDB}.hotel_activity_all using ${EDWDB}.opera_hotel_activity
+on      ${EDWDB}.hotel_activity_all.f_reserve_id  = ${EDWDB}.opera_hotel_activity.f_reserve_id
+AND     ${EDWDB}.hotel_activity_all.c_prop_cd  = ${EDWDB}.opera_hotel_activity.c_prop_cd
+when matched then update 
+set    
+c_activity_status                      =${EDWDB}.opera_hotel_activity.c_activity_status 
+,i_xref_dmid                           =${EDWDB}.opera_hotel_activity.i_xref_dmid                  
+,c_pri_cas_guest_id                    =''
+,c_first_name                          =${EDWDB}.opera_hotel_activity.c_first_name
+,c_last_name                           =${EDWDB}.opera_hotel_activity.c_last_name
+,c_sec_cas_guest_id                    =''
+,i_sec_xref_dmid                       =''
+,d_transaction_dt                      =${EDWDB}.opera_hotel_activity.d_transaction_dt
+,d_reserve_dt                          =${EDWDB}.opera_hotel_activity.d_reserve_dt
+,d_cancel_dt                           =${EDWDB}.opera_hotel_activity.d_cancel_dt
+,d_arrival_dt                          =${EDWDB}.opera_hotel_activity.d_arrival_dt
+,d_departure_dt                        =${EDWDB}.opera_hotel_activity.d_departure_dt
+,c_confirm_id                          =''
+,c_cancel_id                           =''
+,c_share_id                            =''
+,i_nbr_shares                          =''
+,c_reservation_agent_id                =''
+,c_cancel_agent_id                     =''
+,c_checkin_agent_id                    =''
+,c_checkout_agent_id                   =''
+,c_transaction_agent_id                =''
+,c_wing_cd                             =''
+,c_original_rm_type                    =${EDWDB}.opera_hotel_activity.c_original_rm_type
+,c_rm_nbr                              =''
+,i_rm_night                            =''
+,i_nbr_rooms                           =''
+,i_nbr_occupants                       =''
+,c_occupant_type                       =''
+,c_source_cd                           =${EDWDB}.opera_hotel_activity.c_source_cd
+,c_rate_plan                           =${EDWDB}.opera_hotel_activity.c_rate_plan
+,c_group_cd                            =''
+,c_group_type                          =''
+,c_address_1                           =''
+,c_address_2                           =''
+,c_city                                =''
+,c_state_cd                            =''
+,c_zip_cd                              =''
+,d_dob                                 =${EDWDB}.opera_hotel_activity.d_dob
+,c_confirm_email                       =''
+,c_email_contact_flag                  =''
+,c_offer_id                            =''
+,i_customer_segment                    =''
+,c_tracking                            =''
+,c_settle_method                       =''
+,c_credit_card_nbr                     =''
+,c_credit_card_exp_dt                  =''
+,c_credit_card_auth_nbr                =''
+,f_deposit_amt_req                     =''
+,f_deposit_credit_card_chg             =''
+,f_room_rev_reserved                   =''
+,f_room_tax_reserved                   =''
+,d_checkin_dt                          =${EDWDB}.opera_hotel_activity.d_checkin_dt
+,d_checkin_time                        =${EDWDB}.opera_hotel_activity.d_checkin_time
+,c_checkin_location                    =''
+,d_checkout_dt                         =${EDWDB}.opera_hotel_activity.d_checkout_dt
+,d_checkout_time                       =${EDWDB}.opera_hotel_activity.d_checkout_time
+,c_checkout_location                   =''
+,f_room_rev                            =''
+,f_fb_rev                              =''
+,f_other_rev                           =''
+,f_comp_room_rev                       =''
+,f_comp_fb_rev                         =''
+,f_comp_other_rev                      =''
+,c_quality_cd                          =''
+,d_timestamp                           =${EDWDB}.opera_hotel_activity.d_timestamp
+,c_rm_type                             =''
+,c_original_wing_cd                    =${EDWDB}.opera_hotel_activity.c_original_wing_cd
+,i_source_id                           =${EDWDB}.opera_hotel_activity.i_source_id
+                                       
+when not matched then insert 
+values (
+         ${EDWDB}.opera_hotel_activity.f_reserve_id
+        ,${EDWDB}.opera_hotel_activity.c_prop_cd
+        ,${EDWDB}.opera_hotel_activity.c_activity_status 
+        ,${EDWDB}.opera_hotel_activity.i_xref_dmid                  
+        ,''
+        ,${EDWDB}.opera_hotel_activity.c_first_name
+        ,${EDWDB}.opera_hotel_activity.c_last_name
+        ,''
+        ,''
+        ,${EDWDB}.opera_hotel_activity.d_transaction_dt
+        ,${EDWDB}.opera_hotel_activity.d_reserve_dt
+        ,${EDWDB}.opera_hotel_activity.d_cancel_dt
+        ,${EDWDB}.opera_hotel_activity.d_arrival_dt
+        ,${EDWDB}.opera_hotel_activity.d_departure_dt
+        ,''
+        ,''
+        ,''
+        ,''
+        ,''
+        ,''
+        ,''
+        ,''
+        ,''
+        ,''
+        ,${EDWDB}.opera_hotel_activity.c_original_rm_type
+        ,''
+        ,''
+        ,''
+        ,''
+        ,''
+        ,${EDWDB}.opera_hotel_activity.c_source_cd
+        ,${EDWDB}.opera_hotel_activity.c_rate_plan
+        ,''
+        ,''
+        ,''
+        ,''
+        ,''
+        ,''
+        ,''
+        ,${EDWDB}.opera_hotel_activity.d_dob
+        ,''
+        ,''
+        ,''
+        ,''
+        ,''
+        ,''
+        ,''
+        ,''
+        ,''
+        ,''
+        ,''
+        ,''
+        ,''
+        ,${EDWDB}.opera_hotel_activity.d_checkin_dt
+        ,${EDWDB}.opera_hotel_activity.d_checkin_time
+        ,''
+        ,${EDWDB}.opera_hotel_activity.d_checkout_dt
+        ,${EDWDB}.opera_hotel_activity.d_checkout_time
+        ,''
+        ,''
+        ,''
+        ,''
+        ,''
+        ,''
+        ,''
+        ,''
+        ,${EDWDB}.opera_hotel_activity.d_timestamp
+        ,''
+        ,${EDWDB}.opera_hotel_activity.c_original_wing_cd
+        ,${EDWDB}.opera_hotel_activity.i_source_id);
+
+.IF ERRORCODE <> 0 THEN QUIT 8;
+
+.QUIT;
+
+EOD
+
+rc=$?
+if [[ ${rc} -ne 0 ]]; then
+  print "*** Load of hotel_activity_all failed (${rc})" >&2
+  exit 8
+fi
+
+exit 0
