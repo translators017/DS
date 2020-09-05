@@ -9,7 +9,7 @@ rem set warname=%userwarname:.war=%
 rem svn checkout %1 C:\DSBuild\%dirname%\
 
 set maven_path=D:\softwares\apache-maven-3.6.3\bin
-set WORKSPACE=D:\DataSwitch\BuildFolder
+set WORKSPACE=D:\DataSwitch\GitCodebase
 
 call %maven_path%\mvn -f %WORKSPACE%\CoreLibs\ConnectorSpecs\pom.xml clean install -U --log-file "C:\\unitTest.txt"
 echo Exit Code = %ERRORLEVEL%

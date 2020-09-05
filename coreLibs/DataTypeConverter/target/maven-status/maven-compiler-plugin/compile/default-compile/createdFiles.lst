@@ -1,0 +1,12 @@
+com\dataSwitch\ds\commons\datatyperules\HashMapCaseInsensitive.class
+com\dataSwitch\ds\commons\datatyperules\TestDataTypeConv.class
+com\dataSwitch\ds\commons\datatyperules\DataTypeMapRules$dsDataType.class
+com\dataSwitch\ds\commons\datatyperules\DataTypeRule.class
+com\dataSwitch\ds\commons\datatyperules\PrecisonScaleMapRules.class
+com\dataSwitch\ds\commons\datatyperules\SizeRule.class
+com\dataSwitch\ds\commons\datatyperules\DataTypeMapRules.class
+com\dataSwitch\ds\commons\datatyperules\DataTypeObject.class
+com\dataSwitch\ds\commons\datatyperules\TypeRule.class
+com\dataSwitch\ds\commons\datatyperules\OtherRule.class
+com\dataSwitch\ds\commons\datatyperules\ToolTypeConstants.class
+com\dataSwitch\ds\commons\datatyperules\DataTypeConvertor.class

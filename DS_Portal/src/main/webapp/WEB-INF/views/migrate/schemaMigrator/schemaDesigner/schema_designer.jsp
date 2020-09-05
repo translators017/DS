@@ -288,7 +288,7 @@
 	</div>
 	<%@ include file="/WEB-INF/views/common/footer.jsp" %>
 	<script src="<%=request.getContextPath()%>/resources/js/dependency/vis-network.min.js"></script>
-	<script src="<%=request.getContextPath()%>/resources/js/dependency/lodash.min.js"></script>
+	<script src="<%=request.getContextPath()%>/resources/js/dependency/lodash_min.js" ></script>
 	<script src="<%=request.getContextPath()%>/resources/js/dependency/awesomplete.min.js"></script>
 	<script src="<%=request.getContextPath()%>/resources/js/schemaDesigner.js"></script>
 </body>
