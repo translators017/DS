@@ -41,8 +41,8 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter{
           	.invalidateHttpSession(true)
           	.permitAll();
 		  
-		  http.headers()
-          .contentSecurityPolicy("script-src 'self'");
+		  //http.headers()
+          //.contentSecurityPolicy("script-src 'self'");
 	  }
 	 
 

@@ -1136,5 +1136,12 @@ function compareOutput(data){
 	}
 	console.log(fragment);
 	$("#compare").append(fragment);
+	let technology = $('#processGroupBody tr.clicked').data('technology');
+	if(technology.includes('-')){
+		let inputTech = technology.substring(0, technology.lastIndexOf('-')).trim();
+		let outputTech = technology.substring(technology.lastIndexOf('-')+1, technology.length).trim();
+		$('.inputType').empty().append(`<p class="mb-2 font-weight-bold">${inputTech + ' input'}</p>`);
+		$('.outputType').empty().append(`<p class="mb-2 font-weight-bold">${outputTech+ ' output'} </p>`);
+	}
 	$('.spin-loader').hide();
 }

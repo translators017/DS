@@ -93,7 +93,7 @@
 													</c:when>
 													<c:otherwise>
 														<c:forEach items="${processGroups}" var="group" varStatus="id">
-															<tr data-groupname="${group.groupName}">
+															<tr data-groupname="${group.groupName}" data-technology="${group.selectedTechnology}">
 																<td class="w-35">
 																	<div class="custom-control custom-radio">
 																		<input type="radio" class="custom-control-input group-sel" name="groups" id="${group.groupName}">
@@ -186,6 +186,11 @@
      	<button type="button" class="close full-overlay-close" aria-label="Close">
 		  <span aria-hidden="true">&times;</span>
 		</button>
+		<div class="row m-0">
+			<div class="col-4 inputType"></div>
+			<div class="col-4 outputType"></div>
+			<div class="col-4 font-weight-bold">Differences</div>
+		</div>
      	<div class="row m-0">
      		<div class="col-4 compare-window" id="input-compare" spellcheck="false">
      			

@@ -43,6 +43,7 @@
 	</style>
 	<link rel="stylesheet" href="<%=request.getContextPath()%>/resources/css/ds_common.css">
     <link rel="stylesheet" href="<%=request.getContextPath()%>/resources/css/ds_style.css">
+    <link rel="stylesheet" href="<%=request.getContextPath()%>/resources/css/awesomplete.css">
 </head>
 <body id="main" class="catalog-view">
 	<input type="hidden" id="dbListArray" value='${dbListArray}'/>
@@ -238,8 +239,25 @@
 		<div class="filter-overlay">
 			<div class="row m-0 mt-2">
 				<div class="col-4">
-					<input type="text" class="form-control" placeholder="Search for collections / attributes" />
+					<input type="text" class="form-control" name="search-viz" placeholder="Search for collections / attributes" />
 				</div>
+				<!-- <div class="col-1 pl-0">
+					<button class="btn btn-green search-viz-btn">Search</button>
+				</div> -->
+				<!-- <div class="col-6">
+					<div class="custom-control custom-radio custom-control-inline mt-1">
+					  <input type="radio" id="showAll" name="visualization-filter" class="custom-control-input" checked>
+					  <label class="custom-control-label" for="showAll">Show All</label>
+					</div>
+					<div class="custom-control custom-radio custom-control-inline">
+					  <input type="radio" id="showCollections" name="visualization-filter" class="custom-control-input">
+					  <label class="custom-control-label" for="showCollections">Show only Collections</label>
+					</div>
+					<div class="custom-control custom-radio custom-control-inline">
+					  <input type="radio" id="showAttributes" name="visualization-filter" class="custom-control-input">
+					  <label class="custom-control-label" for="showAttributes">Show only attributes</label>
+					</div>
+				</div> -->
 			</div>
 		</div>
 		<div id="contents" class="h-100">
@@ -269,7 +287,9 @@
 		</div>
 	</div>
 	<%@ include file="/WEB-INF/views/common/footer.jsp" %>
-	<script src="<%=request.getContextPath()%>/resources/js/schemaDesigner.js"></script>
 	<script src="<%=request.getContextPath()%>/resources/js/dependency/vis-network.min.js"></script>
+	<script src="<%=request.getContextPath()%>/resources/js/dependency/lodash.min.js"></script>
+	<script src="<%=request.getContextPath()%>/resources/js/dependency/awesomplete.min.js"></script>
+	<script src="<%=request.getContextPath()%>/resources/js/schemaDesigner.js"></script>
 </body>
 </html>

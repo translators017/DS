@@ -1,6 +1,7 @@
 ////////////////Added for Data Switch - Code starts here/////////////////
 //to delete the project - ask confirmation before deleting the project
-
+var network = '';
+let data = '';
 
 (function() {
 	//adding event listeners
@@ -34,6 +35,8 @@
 	
 	    });
 	});
+	
+	
 	
 	const dbListArray = $('#dbListArray').val();
 	let dbDiv = updateDBList(dbListArray);
@@ -250,6 +253,10 @@ function updateVisualization(data){
 	console.log(obj.attributes);
 	let schemaEntitiesJson = JSON.parse(obj.schemaEntities);
 	let attributejson = obj.attributes[0];
+	
+	let edgeArrayList = [];
+	let nodeArrayList = [];
+	
 	function Node(id,cid,label,group){
 		  this.id = id;
 		  this.cid = cid;
@@ -265,8 +272,7 @@ function updateVisualization(data){
 		}
 
 		let cid = 1, id=0;
-		let nodeArrayList = [];
-		let edgeArrayList = [];
+		
 		
 		let schemaDesignObj = JSON.parse(schemaEntitiesJson.schemaDesign);
 		for(var collectionName in schemaDesignObj){
@@ -308,7 +314,7 @@ function updateVisualization(data){
 		    		  if(tableNm.includes('.')){
 		    			  tableNm = tableNm.substring(tableNm.indexOf('.')+1, tableNm.length);
 		    		  }
-		    		  if(tableNm === eachNode.parentName){
+		    		  if(tableNm === eachNode.nodeName){
 					    id++;
 					    let node = new Node(id, nodeAttrParent, attribute.targetAttributeRef, "attribute-group");
 					    nodeArrayList.push(node);
@@ -334,8 +340,8 @@ function updateVisualization(data){
 		
 		
 
-		var nodes = nodeArrayList;
-		var edges = edgeArrayList;
+		let nodes = nodeArrayList;
+		let edges = edgeArrayList;
 		
 		/*var x = 920;
         var y = -470;
@@ -375,8 +381,8 @@ function updateVisualization(data){
         });*/
 
 		  // create a network
-		  var container = document.getElementById('mynetwork');
-		  var options = {
+		  let container = document.getElementById('mynetwork');
+		  let options = {
 				  interaction: {
 			          navigationButtons: true,
 			          keyboard: true,
@@ -464,7 +470,7 @@ function updateVisualization(data){
 			     
 			        }
 			    }; 
-		  var data = {
+		  data = {
 			nodes: nodes,
 		    edges: edges,
 		    animation: { 
@@ -472,7 +478,7 @@ function updateVisualization(data){
 		        easingFunction: String
 		      }  
 		  };
-		  var network = new vis.Network(container, data, options);
+		  network = new vis.Network(container, data, options);
 		  network.fit();
 
 		  draw ();
@@ -559,4 +565,88 @@ function updateVisualization(data){
 		    }
 		  }
 
+	document.querySelector('input[name="search-viz"]').addEventListener('keyup', function(e){
+		updateDataView(e, data, network);
+	});
+	
+	
+	let listArray = [];
+	let attributeArrray = attributejson.attributeArr;
+	attributeArrray.forEach((item) =>{
+		 listArray.push(item.logicalTargetAttributeRef)
+	});
+	
+	//define autocomplete
+	var searchInput = document.querySelector("input[name='search-viz']");
+	new Awesomplete(searchInput, {
+		list: listArray,
+		minChars:1,
+	});
+	
+	window.addEventListener("awesomplete-selectcomplete", function(e){
+	 	updateDataView(e, data, network);
+	}, false);
 }
+
+ function updateDataView(e, data, network) {
+        console.log(data);
+		let inputValue = e.target.value.toLowerCase();
+		if(inputValue != ''){
+			//Script to search
+	        var itemnode = [];
+	        var itemedge = [];
+	        var input = {
+	            "label": inputValue
+	        };
+	        console.log("Input", input, itemnode);
+	        var res;
+	        itemnode = _.filter(data.nodes, input);
+	        console.log("node", itemnode);
+	        for (var i = 0; i < itemnode.length; i++) {
+	            res = _.filter(data.edges, {
+	                to: itemnode[i].id
+	            });
+	            for (var j = 0; j < res.length; j++)
+	                itemedge.push(res[j]);
+	            res = _.filter(data.edges, {
+	                from: itemnode[i].id
+	            });
+	            for (var j = 0; j < res.length; j++)
+	                itemedge.push(res[j]);
+	        };
+	        console.log("edge", itemedge);
+	        for (var i = 0; i < itemedge.length; i++) {
+	            if (!_.find(itemnode, {
+	                id: itemedge[i].to
+	            })) {
+	                res = _.find(data.nodes, {
+	                    id: itemedge[i].to
+	                });
+	                if (res)
+	                    itemnode.push(res);
+	            }
+	            if (!_.find(itemnode, {
+	                id: itemedge[i].from
+	            })) {
+	                res = _.find(data.nodes, {
+	                    id: itemedge[i].from
+	                });
+	                if (res)
+	                    itemnode.push(res);
+	            }
+	        };
+	
+	
+	        var item = {
+				"nodes": itemnode,
+				"edges": itemedge
+			};
+			console.log(item);
+			network.setData(item);
+			network.redraw();
+		}else{
+			network.setData(data);
+			network.redraw();
+		}
+        
+    }
